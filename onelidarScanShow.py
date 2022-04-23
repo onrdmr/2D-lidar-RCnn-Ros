@@ -1,4 +1,3 @@
-# examples/Python/Basic/pointcloud.py
 from ast import arg
 import asyncio
 import time
@@ -8,6 +7,7 @@ import os
 import math
 from multiprocessing import Process, Queue
 from threading import Thread
+
 
 async def draw_pcd_basis(fut,filePath):
     print("Load a ply point cloud, print it, and render it")
@@ -120,8 +120,7 @@ def draw_odometry(posVec):
     posVec = np.array(posVec).transpose()
     print("-----")
 
-    
-    
+    ax = plt.axes(projection='3d')
     ax.scatter3D(posVec[2,:],posVec[0,:],posVec[1,:],)
     
 
@@ -131,119 +130,80 @@ def draw_odometry(posVec):
 
 
 if __name__ == "__main__":
-    dirPath = "/mnt/c/Users/filiz/Desktop/Ara/kitti_velodyne_bin_to_pcd/dataset/"
+    dirPath = "/mnt/c/Users/filiz/Desktop/Ara/kitti_velodyne_bin_to_pcd/dataset_ring_5/"
     posePath = "/mnt/c/Users/filiz/Desktop/Ara/kitti_velodyne_bin_to_pcd/poses/"
     pose = "00.txt"
 
-
+    
     filePath = posePath+pose
     file = open(filePath,'r')
 
-    lines = file.readlines()
-    print(len(lines))
-    posVec = []
-    homogeneousCoords = []
-    for line in lines:
-        # print(line)
-        pose , _ = get6DoFPose(line)
-        posVec.append([pose])
-        homogeneousCoords.append([_])
-        print(pose)
- 
-    x = Process(target=draw_odometry ,args=(posVec,))
-    x.start()
+    for filename in os.listdir(dirPath):
+        pcd = o3d.io.read_point_cloud(dirPath+filename)
+        o3d.visualization.draw_geometries([pcd], )
+    # lines = file.readlines()
+    # print(len(lines))
+    # posVec = []
+
+    # homogeneousCoords = []
+    # for line in lines:
+    #     # print(line)
+    #     pose , _ = get6DoFPose(line)
+    #     posVec.append([pose])
+    #     homogeneousCoords.append([_])
+    #     print(pose)
+
+    # x = Process(target=draw_odometry ,args=(posVec,))
+    # x.start()
     
-    file.close()
-    vis = o3d.visualization.Visualizer()
-    vis.create_window()
-    final_pointcloud = o3d.geometry.PointCloud()
+    # file.close()
+    # vis = o3d.visualization.Visualizer()
+    # vis.create_window()
+    # final_pointcloud = o3d.geometry.PointCloud()
     
-    mesh = create_mesh(0.5, 0.5, 0.5)
-    transformItr = 0
-    print("----------")
-    # print(homogeneousCoords[transformItr][0])
+    # mesh = create_mesh(0.5, 0.5, 0.5)
+    # transformItr = 0
+    # print("----------")
 
-    # mesh.transform(homogeneousCoords[transformItr][0])
-    
-    print(np.array([posVec[transformItr][0][0],posVec[transformItr][0][1],posVec[transformItr][0][2]]))
-    mesh.translate(np.array([posVec[transformItr][0][0],posVec[transformItr][0][1],posVec[transformItr][0][2]],dtype=np.float128),relative=False)
+    # curr_pose = get_mesh_pose(mesh)
 
-    # print(np.array([posVec[transformItr][0][0],posVec[transformItr][0][1],posVec[transformItr][0][2]]).transpose())
+    # print("current pose of the mesh")
+    # print(repr(curr_pose))
+    # print(mesh.get_center())
 
+    # # assert(1=""=2)
+    # firstAnimate=True
+    # for dir in os.listdir(dirPath):
 
-    curr_pose = get_mesh_pose(mesh)
+    #     pcd, voxel_grid, downpcd = asyncio.run(getData(dirPath + dir))
 
-    print("current pose of the mesh")
-    print(repr(curr_pose))
-    print(mesh.get_center())
-
-    # assert(1=""=2)
-    firstAnimate=True
-    for dir in os.listdir(dirPath):
-
-        pcd, voxel_grid, downpcd = asyncio.run(getData(dirPath + dir))
-
-
-        pointcloud_as_array = np.asarray(pcd.points)
-        Z = 1
-        d = 1
-
-        # Go through each point in the array for "slicing"
-        final_pointcloud_array = []
-        for point in pointcloud_as_array:
-            if Z - d < point[2] < Z + d :
-                final_pointcloud_array.append(point)
-
-        # Create Open3D point cloud object from array
-        final_pointcloud.points = o3d.utility.Vector3dVector(final_pointcloud_array)
-        # print(final_pointcloud)
-        # print(np.asarray(pcd.points))
-
-        if(firstAnimate == True):
-            vis.add_geometry(final_pointcloud)
-            vis.add_geometry(mesh)
-            vis.poll_events()
-            vis.update_renderer()
-            firstAnimate = False
-            continue
+    #     if(firstAnimate == True):
+    #         vis.add_geometry(pcd)
+    #         vis.add_geometry(mesh)
+    #         vis.poll_events()
+    #         vis.update_renderer()
+    #         firstAnimate = False
+    #         continue
         
 
 
-        vis.update_geometry(final_pointcloud)
-        vis.poll_events()
-        vis.update_renderer()
-        vis.update_geometry(mesh)
-        vis.poll_events()
-        vis.update_renderer()
+    #     vis.update_geometry(pcd)
+    #     vis.poll_events()
+    #     vis.update_renderer()
+    #     vis.update_geometry(mesh)
+    #     vis.poll_events()
+    #     vis.update_renderer()
         
-        transformItr+=1
-        mesh.transform(homogeneousCoords[transformItr][0] @ np.linalg.inv(homogeneousCoords[transformItr-1][0]))
-        print(np.array([posVec[transformItr][0][0],posVec[transformItr][0][1],posVec[transformItr][0][2]]))
-
-        # mesh.translate(np.array([posVec[transformItr][0][0],posVec[transformItr][0][1],posVec[transformItr][0][2]]),relative=False)
-
-        curr_pose = get_mesh_pose(mesh)
-
-        print("current pose of the mesh")
-        print(repr(curr_pose))
-
-        print(mesh.get_center())
-
-        # p = Process(target=drawWindow, args=(pcd,"point clssoud"))
-        # p2 = Process(target=drawWindow, args=(voxel_grid,"voxel grid"))
-        # p3 = Process(target=drawWindow, args=(downpcd,"down sampled"))
-        # p4 = Process(target=drawWindow, args=(final_pointcloud,"sliced Z = 2"))
+    #     transformItr+=1
+    #     mesh.transform(homogeneousCoords[transformItr][0] @ np.linalg.inv(homogeneousCoords[transformItr-1][0]))
+    #     print(np.array([posVec[transformItr][0][0],posVec[transformItr][0][1],posVec[transformItr][0][2]]))
 
 
-        # p.start()
-        # p2.start()
-        # p3.start()
-        # p4.start()
+    #     curr_pose = get_mesh_pose(mesh)
 
-        # p4.join()
-        # p3.join()
-        # p2.join()
-        # p.join()
+    #     print("current pose of the mesh")
+    #     print(repr(curr_pose))
 
-    # x.join()
-    vis.destroy_window()
+    #     print(mesh.get_center())
+
+    # vis.destroy_window()

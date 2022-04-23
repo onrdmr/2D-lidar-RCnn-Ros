@@ -1,6 +1,7 @@
 from ast import arg
 import asyncio
 import time
+from turtle import window_height
 import numpy as np
 import open3d as o3d
 import os
@@ -108,20 +109,20 @@ def create_mesh(width, height, depth):
                                                         height=height,
                                                         depth=depth)
 
-from mpl_toolkits import mplot3d
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
-def draw_odometry(posVec):
+def draw_odometry(posVec, windowName="Ground Truth Odometry"):
        
     fig = plt.figure()
-
+    fig.canvas.set_window_title(windowName)
     posVec = np.array(posVec).transpose()
     print("-----")
 
     ax = plt.axes(projection='3d')
-    ax.scatter3D(posVec[2,:],posVec[0,:],posVec[1,:],)
+    ax.scatter3D(posVec[0,:],posVec[1,:],posVec[2,:],)
     
 
     #ax.quiver(posVec[0,:], posVec[1,:], posVec[2,:], posVec[3,:], posVec[4,:], posVec[5,:], normalize=True)
@@ -134,13 +135,88 @@ if __name__ == "__main__":
     posePath = "/mnt/c/Users/filiz/Desktop/Ara/kitti_velodyne_bin_to_pcd/poses/"
     pose = "00.txt"
 
-    
+
     filePath = posePath+pose
     file = open(filePath,'r')
 
-    for filename in os.listdir(dirPath):
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+
+    lines = file.readlines()
+    file.close()
+    posVec = []
+    homogeneousCoords = []
+    for line in lines:
+        # print(line)
+        pos , transformMatrix = get6DoFPose(line)
+        homogeneousCoords.append(transformMatrix)
+        posVec.append([pos])
+        print(pose)
+ 
+
+    x = Process(target=draw_odometry ,args=(posVec,))
+    x.start()
+
+    plt.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+
+    for i,filename in enumerate(os.listdir(dirPath)):
+        print(posVec[i][0][0])
+        ax.scatter([posVec[i][0][0]],[posVec[i][0][1]],[posVec[i][0][2]])
+        plt.draw()
+        plt.pause(0.00000001)
+      
+        mesh = create_mesh(4, 4, 4)
+        # mesh.translate(np.array([posVec[i][0][0],posVec[i][0][1],posVec[i][0][2]],dtype=np.float128),relative=False)
+
         pcd = o3d.io.read_point_cloud(dirPath+filename)
-        o3d.visualization.draw_geometries([pcd], )
+        pcd.transform(homogeneousCoords[i])
+        mesh.transform(homogeneousCoords[i])
+
+        vis.add_geometry(mesh)
+        vis.add_geometry(pcd)
+        vis.run()
+
+        vis.poll_events()
+        vis.update_renderer()
+
+        print(filename)
+        vis.clear_geometries()
+        
+
+    x.join()
+        # o3d.visualization.draw_geometries([pcd], )
+    vis.destroy_window()
+    
+
+
+    # firstAnimate=True
+    # for dir in os.listdir(dirPath):
+
+    #     pcd = o3d.io.read_point_cloud(dirPath+dir)
+
+    #     if(firstAnimate == True):
+    #         vis.add_geometry(pcd)
+    #         vis.poll_events()
+    #         print("first renderer", np.asarray(pcd.points))
+
+    #         vis.update_renderer()
+    #         firstAnimate = False
+    #         continue
+
+    #     vis.update_geometry(pcd)
+    #     vis.poll_events()
+    #     print("updating renderer", np.asarray(pcd.points))
+    #     vis.update_renderer()
+
+
+    # vis.destroy_window()
+
     # lines = file.readlines()
     # print(len(lines))
     # posVec = []
@@ -171,7 +247,7 @@ if __name__ == "__main__":
     # print(repr(curr_pose))
     # print(mesh.get_center())
 
-    # # assert(1=""=2)
+    # assert(1=""=2)
     # firstAnimate=True
     # for dir in os.listdir(dirPath):
 
@@ -184,8 +260,6 @@ if __name__ == "__main__":
     #         vis.update_renderer()
     #         firstAnimate = False
     #         continue
-        
-
 
     #     vis.update_geometry(pcd)
     #     vis.poll_events()
