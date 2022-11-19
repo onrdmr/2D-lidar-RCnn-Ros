@@ -7,3 +7,5 @@ kitti_velodyne_bin_to_pcd/**
 **/dist
 **/_build
 **/devel
+**/random_world/models/**
+husky_sim/src/map_creator_script/nav2_random_map_generator/random_world/models/**

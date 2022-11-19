@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <name>gazebo_map_plugin</name>
+  <version>0.6.2</version>
+  <description>Clearpath Husky plugin definition</description>
+
+  <author email="onur.demir2@std.yildiz.edu.tr">Onur Demir</author>
+  
+  <maintainer email="tbaltovski@clearpathrobotics.com">Tony Baltovski</maintainer>
+
+  <url type="repository">https://github.com/husky/husky</url>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <run_depend>gazebo</run_depend>
+  
+  <export>
+  </export>
+</package>
