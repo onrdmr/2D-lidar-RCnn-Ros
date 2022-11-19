@@ -1,0 +1,510 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="mobile_base">
+    <pose frame="">0 0 0 0 -0 0</pose>
+    <static>0</static>
+    <self_collide>0</self_collide>
+    <allow_auto_disable>0</allow_auto_disable>
+    <link name="chassis">
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+      <self_collide>0</self_collide>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>2 1 0.3</size>
+          </box>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>2 1 0.3</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.560784 0.713725 0.482353 1</ambient>
+          <diffuse>0.5607843137254902 0.7137254901960784 0.4823529411764706 1</diffuse>
+        </material>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <cast_shadows>1</cast_shadows>
+        <transparency>0.0</transparency>
+      </visual>
+      <inertial>
+        <inertia>
+          <ixx>1.8166666666666667</ixx>
+          <iyy>6.8166666666666655</iyy>
+          <izz>8.333333333333332</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <mass>20.0</mass>
+      </inertial>
+      <pose frame="">0 0 0 0 -0 0</pose>
+    </link>
+    <link name="caster_wheel">
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+      <self_collide>0</self_collide>
+      <collision name="collision">
+        <geometry>
+          <sphere>
+            <radius>0.125</radius>
+          </sphere>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.0</mu>
+              <mu2>0.0</mu2>
+              <fdir1>0 0 0</fdir1>
+              <slip1>0.0</slip1>
+              <slip2>0.0</slip2>
+            </ode>
+            <bullet>
+              <friction>0.0</friction>
+              <friction2>0.0</friction2>
+              <rolling_friction>1.0</rolling_friction>
+              <fdir1>0 0 0</fdir1>
+            </bullet>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <sphere>
+            <radius>0.125</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.988235 0.14902 0.278431 1</ambient>
+          <diffuse>0.9882352941176471 0.14901960784313725 0.2784313725490196 1</diffuse>
+        </material>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <cast_shadows>1</cast_shadows>
+        <transparency>0.0</transparency>
+      </visual>
+      <inertial>
+        <inertia>
+          <ixx>0.00625</ixx>
+          <iyy>0.00625</iyy>
+          <izz>0.00625</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <mass>1.0</mass>
+      </inertial>
+      <pose frame="">0.8 0 -0.125 0 -0 0</pose>
+    </link>
+    <link name="left_wheel">
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+      <self_collide>0</self_collide>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.125</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.125</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.00784314 0.105882 0.976471 1</ambient>
+          <diffuse>0.00784313725490196 0.10588235294117647 0.9764705882352941 1</diffuse>
+        </material>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <cast_shadows>1</cast_shadows>
+        <transparency>0.0</transparency>
+      </visual>
+      <inertial>
+        <inertia>
+          <ixx>0.004114583333333333</ixx>
+          <iyy>0.004114583333333333</iyy>
+          <izz>0.0078125</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <mass>1.0</mass>
+      </inertial>
+      <pose frame="">-0.8 0.525 -0.125 5.76279e-13 1.5707 1.5707</pose>
+    </link>
+    <link name="right_wheel">
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+      <self_collide>0</self_collide>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.125</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.125</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.627451 0.211765 0.137255 1</ambient>
+          <diffuse>0.6274509803921569 0.21176470588235294 0.13725490196078433 1</diffuse>
+        </material>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <cast_shadows>1</cast_shadows>
+        <transparency>0.0</transparency>
+      </visual>
+      <inertial>
+        <inertia>
+          <ixx>0.004114583333333333</ixx>
+          <iyy>0.004114583333333333</iyy>
+          <izz>0.0078125</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <mass>1.0</mass>
+      </inertial>
+      <pose frame="">-0.8 -0.525 -0.125 5.76279e-13 1.5707 1.5707</pose>
+    </link>
+    <link name="imu_link">
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+      <self_collide>0</self_collide>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.1 0.1 0.1</size>
+          </box>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.1 0.1 0.1</size>
+          </box>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <cast_shadows>1</cast_shadows>
+        <transparency>0.0</transparency>
+      </visual>
+      <sensor name="imu" type="imu">
+        <always_on>1</always_on>
+        <visualize>1</visualize>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <topic>/imu</topic>
+        <update_rate>50.0</update_rate>
+        <plugin name="imu" filename="libgazebo_ros_imu_sensor.so">
+          <robotNamespace></robotNamespace>
+          <alwaysOn>1</alwaysOn>
+          <updateRateHZ>50</updateRateHZ>
+          <bodyName>imu_link</bodyName>
+          <topicName>/imu</topicName>
+          <gaussianNoise>0</gaussianNoise>
+          <frameName>world</frameName>
+        </plugin>
+        <imu>
+          <topic>/imu</topic>
+          <angular_velocity>
+            <x>
+              <noise type="none">
+                <mean>0.0</mean>
+                <stddev>0.0</stddev>
+                <bias_mean>0.0</bias_mean>
+                <bias_stddev>0.0</bias_stddev>
+                <precision>0.0</precision>
+              </noise>
+            </x>
+            <y>
+              <noise type="none">
+                <mean>0.0</mean>
+                <stddev>0.0</stddev>
+                <bias_mean>0.0</bias_mean>
+                <bias_stddev>0.0</bias_stddev>
+                <precision>0.0</precision>
+              </noise>
+            </y>
+            <z>
+              <noise type="none">
+                <mean>0.0</mean>
+                <stddev>0.0</stddev>
+                <bias_mean>0.0</bias_mean>
+                <bias_stddev>0.0</bias_stddev>
+                <precision>0.0</precision>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="none">
+                <mean>0.0</mean>
+                <stddev>0.0</stddev>
+                <bias_mean>0.0</bias_mean>
+                <bias_stddev>0.0</bias_stddev>
+                <precision>0.0</precision>
+              </noise>
+            </x>
+            <y>
+              <noise type="none">
+                <mean>0.0</mean>
+                <stddev>0.0</stddev>
+                <bias_mean>0.0</bias_mean>
+                <bias_stddev>0.0</bias_stddev>
+                <precision>0.0</precision>
+              </noise>
+            </y>
+            <z>
+              <noise type="none">
+                <mean>0.0</mean>
+                <stddev>0.0</stddev>
+                <bias_mean>0.0</bias_mean>
+                <bias_stddev>0.0</bias_stddev>
+                <precision>0.0</precision>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+      </sensor>
+      <inertial>
+        <inertia>
+          <ixx>1.6666666666666667e-05</ixx>
+          <iyy>1.6666666666666667e-05</iyy>
+          <izz>1.6666666666666667e-05</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <mass>0.01</mass>
+      </inertial>
+      <pose frame="">0 0 0 0 -0 0</pose>
+    </link>
+    <link name="contact_link">
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+      <self_collide>0</self_collide>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.05</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.05</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <cast_shadows>1</cast_shadows>
+        <transparency>0.0</transparency>
+      </visual>
+      <sensor name="contact" type="contact">
+        <always_on>1</always_on>
+        <visualize>0</visualize>
+        <pose frame="">1 0 0 0 -0 0</pose>
+        <topic>/bumper</topic>
+        <update_rate>50.0</update_rate>
+        <plugin name="contact" filename="libgazebo_ros_bumper.so">
+          <robotNamespace></robotNamespace>
+          <frameName>world</frameName>
+          <bumperTopicName>/bumper</bumperTopicName>
+        </plugin>
+        <contact>
+          <collision>__default__</collision>
+          <topic>/bumper</topic>
+          <collision>collision</collision>
+        </contact>
+      </sensor>
+      <inertial>
+        <inertia>
+          <ixx>1.4583333333333333e-05</ixx>
+          <iyy>1.4583333333333333e-05</iyy>
+          <izz>1.2500000000000002e-05</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <mass>0.01</mass>
+      </inertial>
+      <pose frame="">1 0 0 0 -0 0</pose>
+    </link>
+    <link name="camera_link">
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+      <self_collide>0</self_collide>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.1 0.1 0.1</size>
+          </box>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.1 0.1 0.1</size>
+          </box>
+        </geometry>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <cast_shadows>1</cast_shadows>
+        <transparency>0.0</transparency>
+      </visual>
+      <sensor name="camera" type="camera">
+        <always_on>1</always_on>
+        <visualize>1</visualize>
+        <pose frame="">1 0 0.2 0 -0 0</pose>
+        <topic>/camera</topic>
+        <update_rate>50.0</update_rate>
+        <plugin name="camera" filename="libgazebo_ros_camera.so">
+          <robotNamespace></robotNamespace>
+          <updateRate>0</updateRate>
+          <cameraName>camera</cameraName>
+          <imageTopicName>image_raw</imageTopicName>
+          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+          <frameName>camera_link</frameName>
+          <hackBaseline>0.07</hackBaseline>
+          <distortionK1>0</distortionK1>
+          <distortionK2>0</distortionK2>
+          <distortionK3>0</distortionK3>
+          <distortionT1>0</distortionT1>
+          <distortionT2>0</distortionT2>
+        </plugin>
+        <camera name="camera">
+          <noise type="none">
+            <mean>0.0</mean>
+            <stddev>0.0</stddev>
+            <bias_mean>0.0</bias_mean>
+            <bias_stddev>0.0</bias_stddev>
+            <precision>0.0</precision>
+          </noise>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <height>240.0</height>
+            <width>320.0</width>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <far>100.0</far>
+            <near>0.1</near>
+          </clip>
+          <save enabled="False">
+            <path>__default__</path>
+          </save>
+          <depth_camera>
+            <output>depths</output>
+          </depth_camera>
+          <distortion>
+            <k1>0.0</k1>
+            <k2>0.0</k2>
+            <k3>0.0</k3>
+            <p1>0.0</p1>
+            <p2>0.0</p2>
+            <center>0.5 0.5</center>
+          </distortion>
+        </camera>
+      </sensor>
+      <inertial>
+        <inertia>
+          <ixx>1.6666666666666667e-05</ixx>
+          <iyy>1.6666666666666667e-05</iyy>
+          <izz>1.6666666666666667e-05</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+        <pose frame="">0 0 0 0 -0 0</pose>
+        <mass>0.01</mass>
+      </inertial>
+      <pose frame="">1 0 0.2 0 -0 0</pose>
+    </link>
+    <joint name="caster_wheel_joint" type="fixed">
+      <parent>chassis</parent>
+      <child>caster_wheel</child>
+      <pose frame="">0 0 0 0 -0 0</pose>
+    </joint>
+    <joint name="left_wheel_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>left_wheel</child>
+      <pose frame="">0 0 0 0 -0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+          <velocity>-1.0</velocity>
+          <effort>-1.0</effort>
+        </limit>
+        <dynamics>
+          <spring_reference>0.0</spring_reference>
+          <spring_stiffness>0.0</spring_stiffness>
+          <damping>0.0</damping>
+          <friction>0.0</friction>
+        </dynamics>
+        <use_parent_model_frame>0</use_parent_model_frame>
+      </axis>
+    </joint>
+    <joint name="right_wheel_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>right_wheel</child>
+      <pose frame="">0 0 0 0 -0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+          <velocity>-1.0</velocity>
+          <effort>-1.0</effort>
+        </limit>
+        <dynamics>
+          <spring_reference>0.0</spring_reference>
+          <spring_stiffness>0.0</spring_stiffness>
+          <damping>0.0</damping>
+          <friction>0.0</friction>
+        </dynamics>
+        <use_parent_model_frame>0</use_parent_model_frame>
+      </axis>
+    </joint>
+    <joint name="imu_joint" type="fixed">
+      <parent>chassis</parent>
+      <child>imu_link</child>
+      <pose frame="">0 0 0 0 -0 0</pose>
+    </joint>
+    <joint name="contact_joint" type="fixed">
+      <parent>chassis</parent>
+      <child>contact_link</child>
+      <pose frame="">0 0 0 0 -0 0</pose>
+    </joint>
+    <joint name="camera_joint" type="fixed">
+      <parent>chassis</parent>
+      <child>camera_link</child>
+      <pose frame="">0 0 0 0 -0 0</pose>
+    </joint>
+  </model>
+</sdf>

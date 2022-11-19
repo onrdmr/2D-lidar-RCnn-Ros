@@ -3,3 +3,7 @@ kitti_velodyne_bin_to_pcd/**
 *.zip
 *.ply
 *.deb
+**/build
+**/dist
+**/_build
+**/devel
