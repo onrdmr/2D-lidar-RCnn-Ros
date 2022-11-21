@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <cstdlib>
 #include <stdarg.h>
-
+#include <string.h>
 /* Only the CAPI header is required */
 #include <geos_c.h>
 // /* For WKT read/write cpp api unstable warning */
@@ -45,6 +45,8 @@
 // using geos::io::WKBWriter;
 
 #define PI 3.14159265359
+#define ROBOT_SIZE 0.55  // 0.7
+#define ROBOT_WING 0.4
 
 namespace gazebo
 {
@@ -93,85 +95,110 @@ public:
 
     reposeRobot();
 
-    std::cout << "intersection : " << IntersectionCheck() << std::endl;
+    // std::cout << "intersection : " << IntersectionCheck() << std::endl;
     printf("Random move plugin is creating!\n");
   }
 
-  bool IntersectionCheck()
+  bool IntersectionCheck(double x, double y, double yaw)
   {
+    bool intersection = false;
     initGEOS(geos_message_handler, geos_message_handler);
 
     /*
         <!-- Base Size -->
-  <xacro:property name="base_x_size" value="0.98740000" />
-  <xacro:property name="base_y_size" value="0.57090000" />
-  <xacro:property name="base_z_size" value="0.24750000" />
+        <xacro:property name="base_x_size" value="0.98740000" />
+        <xacro:property name="base_y_size" value="0.57090000" />
+        <xacro:property name="base_z_size" value="0.24750000" />
 
     */
     Point point1;
-    point1.x = position.x - 0.5;
-    point1.y = position.y - 0.3;
+    point1.x = x - ROBOT_SIZE;
+    point1.y = y - ROBOT_WING;
 
     Point point2;
-    point2.x = position.x + 0.5;
-    point2.y = position.y - 0.3;
+    point2.x = x + ROBOT_SIZE;
+    point2.y = y - ROBOT_WING;
 
     Point point3;
-    point3.x = position.x + 0.5;
-    point3.y = position.y + 0.3;
+    point3.x = x + ROBOT_SIZE;
+    point3.y = y + ROBOT_WING;
 
     Point point4;
-    point4.x = position.x - 0.5;
-    point4.y = position.y + 0.3;
+    point4.x = x - ROBOT_SIZE;
+    point4.y = y + ROBOT_WING;
 
-    const std::string& robotWKT = PolyrotateUsingYaw(point1, point2, point3, point4, position);
+    RobotPosition centroid;
+    centroid.x = x;
+    centroid.y = y;
+    centroid.yaw = yaw;
+    const std::string& robotWKT = PolyrotateUsingYaw(point1, point2, point3, point4, centroid);
 
     std::cout << robotWKT << std::endl;
     unsigned char buffer_b[300000];
 
-    std::cout << this->buildingEditorPath + "/wall1/mmap/line_0" << std::endl;
-    std::string meshWKBPath = this->buildingEditorPath + "/wall1/mmap/line_0";
-    FILE* filp_b = fopen(meshWKBPath.c_str(), "rb");
-    int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
-    printf("buffer 2 : %d bytes \n", bytes_read_b);
-
-    fclose(filp_b);
-    //   unsigned char* a;
-    //   a = (unsigned char*)wkb_b;
-    //   /* Read the WKT into geometry objects */
-
-    GEOSWKBReader* reader = GEOSWKBReader_create();
     GEOSWKTReader* readerWKT = GEOSWKTReader_create();
-    std::cout << "hata 1" << std::endl;
     GEOSGeometry* geom_a = GEOSWKTReader_read(readerWKT, robotWKT.c_str());
-    std::cout << "hata 2.5" << std::endl;
 
-    GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
-    /* Calculate the intersection */
-    GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
-    std::cout << "hata 2" << std::endl;
-    /* Convert result to WKT */
-    GEOSWKTWriter* writer = GEOSWKTWriter_create();
-    /* Trim trailing zeros off output */
-    GEOSWKTWriter_setTrim(writer, 1);
-    char* wkt_inter = GEOSWKTWriter_write(writer, inter);
+    for (int i = 0; i < 23; i++)
+    {
+      GEOSWKBReader* reader = GEOSWKBReader_create();
+      GEOSWKTWriter* writer = GEOSWKTWriter_create();
+      std::cout << "duvar " << i << " ve robot arasında kesişim aranıyor." << std::endl;
+      std::cout << this->buildingEditorPath + "/wall1/mmap/line_" << i << std::endl;
+      std::string meshWKBPath = this->buildingEditorPath + "/wall1/mmap/line_" + std::to_string(i);
+      FILE* filp_b = fopen(meshWKBPath.c_str(), "rb");
+      int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
+      printf("buffer 2 : %d bytes \n", bytes_read_b);
+      fclose(filp_b);
+      //   unsigned char* a;
+      //   a = (unsigned char*)wkb_b;
+      //   /* Read the WKT into geometry objects */
 
-    /* Print answer */
-    printf("Intersection(A, B): %s\n", wkt_inter);
+      GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
+      /* Calculate the intersection */
+      GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
 
-    /* Clean up everything we allocated */
+      /* Convert result to WKT */
+
+      /* Trim trailing zeros off output */
+      GEOSWKTWriter_setTrim(writer, 1);
+      char* wkt_inter = GEOSWKTWriter_write(writer, inter);
+      char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
+
+      /* Print answer */
+      printf("Intersection(A, B): %s\n", wkt_inter);
+      printf("WallPolygon(A, B): %s\n", wall_geom);
+
+      char* output = NULL;
+      output = strstr(wkt_inter, "EMPTY");
+
+      if (output == NULL)
+      {
+        intersection = true;
+        GEOSWKBReader_destroy(reader);
+        GEOSWKTWriter_destroy(writer);
+        GEOSGeom_destroy(geom_b);
+        GEOSGeom_destroy(inter);
+        GEOSFree(wkt_inter);
+        GEOSWKTReader_destroy(readerWKT);
+        GEOSGeom_destroy(geom_a);
+        return intersection;
+      }
+      GEOSWKBReader_destroy(reader);
+      GEOSWKTWriter_destroy(writer);
+      GEOSGeom_destroy(geom_b);
+      GEOSGeom_destroy(inter);
+      GEOSFree(wkt_inter);
+    }
+
     GEOSWKTReader_destroy(readerWKT);
-    GEOSWKBReader_destroy(reader);
-    GEOSWKTWriter_destroy(writer);
     GEOSGeom_destroy(geom_a);
-    GEOSGeom_destroy(geom_b);
-    GEOSGeom_destroy(inter);
-    GEOSFree(wkt_inter);
+    /* Clean up everything we allocated */
 
     /* Clean up the global context */
     finishGEOS();
 
-    return false;
+    return intersection;
   }
 
   const PositionDerivatives createRandomDerivative()
@@ -222,17 +249,30 @@ public:
     // std::cout << "frame is " << 0 << std::endl;
     // std::cout << "x: " << position.x << "y:" << position.y << "yaw:" << position.yaw << std::endl;
 
-    int sampleFactor = 10;
+    int sampleFactor = 2;
     int sample = simTimePerIter * sampleFactor;
     for (int i = 1; i <= sample; i++)
     {
-      const double keyFrame = i / static_cast<double>(sample) * simTimePerIter;
-      key = anim->CreateKeyFrame(keyFrame);
+      std::cout << "Örnek " << i << "deneniyor." << std::endl;
       PositionDerivatives derivatives = createRandomDerivative();
-      position.x = position.x + derivatives.dx;
-      position.y = position.y + derivatives.dy;
-      position.yaw = derivatives.dyaw;
-      // // log frane
+      double x = position.x + derivatives.dx;
+      double y = position.y + derivatives.dy;
+      double yaw = derivatives.dyaw;
+      // log frame
+
+      if (IntersectionCheck(x, y, yaw))
+      {
+        std::cout << i << " ci örnekte kesişim bulundu. " << std::endl;
+        i--;
+        continue;
+      }
+      const double keyFrame = i / static_cast<double>(sample) * simTimePerIter;
+      std::cout << "Örnek " << i << " keyframe" << keyFrame << std::endl;
+      key = anim->CreateKeyFrame(keyFrame);
+
+      position.x = x;
+      position.y = y;
+      position.yaw = yaw;
       // std::cout << "frame is " << keyFrame << std::endl;
       // std::cout << "x: " << position.x << "y:" << position.y << "yaw:" << position.yaw << std::endl;
       key->Translation(ignition::math::Vector3d(position.x, position.y, 0.132273));
@@ -312,25 +352,49 @@ private:
     double s = sin(position.yaw);
     double c = cos(position.yaw);
 
+    std::cout << position.yaw << std::endl;
+
+    std::cout << "ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
+                     std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " +
+                     std::to_string(point3.y) + ", " + std::to_string(point4.x) + " " + std::to_string(point4.y) + "," +
+                     std::to_string(point1.x) + " " + std::to_string(point1.y) + "))"
+              << std::endl;
+
     point1.x -= position.x;
     point1.y -= position.y;
-    point1.x = point1.x * c - point1.y * s + position.x;
-    point1.y = point1.x * s + point1.y * c + +position.y;
+    double point1_x = point1.x * c - point1.y * s + position.x;
+    double point1_y = point1.x * s + point1.y * c + position.y;
+    point1.x = point1_x;
+    point1.y = point1_y;
 
     point2.x -= position.x;
     point2.y -= position.y;
-    point2.x = point2.x * c - point2.y * s + position.x;
-    point2.y = point2.x * s + point2.y * c + position.y;
+    double point2_x = point2.x * c - point2.y * s + position.x;
+    double point2_y = point2.x * s + point2.y * c + position.y;
+    point2.x = point2_x;
+    point2.y = point2_y;
 
     point3.x -= position.x;
     point3.y -= position.y;
-    point3.x = point3.x * c - point3.y * s + position.x;
-    point3.y = point3.x * s + point3.y * c + position.y;
+    double point3_x = point3.x * c - point3.y * s + position.x;
+    double point3_y = point3.x * s + point3.y * c + position.y;
+    point3.x = point3_x;
+    point3.y = point3_y;
 
     point4.x -= position.x;
     point4.y -= position.y;
-    point4.x = point4.x * c - point4.y * s + position.x;
-    point4.y = point4.x * s + point4.y * c + position.y;
+    double point4_x = point4.x * c - point4.y * s + position.x;
+    double point4_y = point4.x * s + point4.y * c + position.y;
+    point4.x = point4_x;
+    point4.y = point4_y;
+
+    // std::ofstream deneme("deneme");
+    // robot polygon hatalı
+    std::cout << "ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
+                     std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " +
+                     std::to_string(point3.y) + ", " + std::to_string(point4.x) + " " + std::to_string(point4.y) + "," +
+                     std::to_string(point1.x) + " " + std::to_string(point1.y) + "))"
+              << std::endl;
 
     return "POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " + std::to_string(point2.x) +
            " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " + std::to_string(point3.y) + ", " +

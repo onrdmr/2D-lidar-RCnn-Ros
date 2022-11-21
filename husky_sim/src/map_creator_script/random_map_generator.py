@@ -18,7 +18,7 @@ from pcg_gazebo.generators import WorldGenerator
 from pcg_gazebo.utils import generate_random_string
 from numpy import random
 from math import pi as PI
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString, Point
 from numpy import random
 from math import pi as PI
 
@@ -32,8 +32,8 @@ SINGLE_ROOM_ARG_COUNT = 3
 WALL_THICKNESS = 0.15
 WALL_HEIGHT = 2
 
-HUSKY_SIZE_X = 0.98740000
-HUSKY_SIZE_Y = 0.57090000
+HUSKY_SIZE_X = 1.1#0.98740000
+HUSKY_SIZE_Y = 0.8#0.57090000
 
 stat_sign_factor = 1.645
 
@@ -221,7 +221,7 @@ def detectHoughLines(image, threshold=5, minLineLength = 5, maxLineGap=5 , rho=1
     # and Min line length of 3 pixels and max gap between lines of 25 pixels
     lines = cv2.HoughLinesP(edges, rho=rho, theta=np.pi / 180, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
 
-    lines = cv2.HoughLinesP(edges, rho=rho, theta=np.pi / 180, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+    # lines = cv2.HoughLinesP(edges, rho=rho, theta=np.pi / 180, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
     bundler = HoughBundler(min_distance=10,min_angle=5)
     lines = bundler.process_lines(lines)
 
@@ -292,7 +292,7 @@ def createGazeboAssetModelConfig():
 
     return path
 
-def add_wall(walls_model, wall_param, wall_name='Wall', width=0.15, height=2.5) :
+def add_wall(walls_model, wall_param, width, height, wall_name='Wall') :
 
     box = create_sdf_element('box')
     box.size = [wall_param['dist'], width, height]
@@ -307,7 +307,7 @@ def add_wall(walls_model, wall_param, wall_name='Wall', width=0.15, height=2.5) 
     link.pose = [wall_param['x'], wall_param['y'], wall_param['z'], wall_param['roll'],wall_param['pitch'],wall_param['yaw']]
     link.add_collision(name="collision", collision=collision)
     link.add_visual(name="visual", visual=visual)
-
+    
     return walls_model
 
 def addRandomMeshesFromDB(engine, wall_sdf):
@@ -335,6 +335,7 @@ def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bound
             robot_file.close()
 
         return
+
     sub_models = sorted(world_gen.world.models)
     sub_models = removeIf(sub_models, 'walls')
     sub_models = removeIf(sub_models, 'robot')
@@ -400,26 +401,69 @@ def createWallPolygonMultiRoom(lines, scale_factor, path):
     mmap_model_folder_path = path+'/mmap'
     mkdir(mmap_model_folder_path)
     for j,line in enumerate(lines):
-        line = Polygon(
-        ((line[0][0] * scale_factor, line[0][1] * scale_factor,0),
-            (line[0][0] * scale_factor, line[0][3] * scale_factor,0),
-            (line[0][2] * scale_factor, line[0][1] * scale_factor,0),
-            (line[0][2] * scale_factor, line[0][3] * scale_factor,0))
-        )
+        line = line[0]
         
-        lineFile=open(mmap_model_folder_path + '/line_'+str(j), 'wb')
-        lineFile.write(line.wkb)
+        # x_cent = ((line[0] + line[2]) / 2) * scale_factor
+        # y_cent = ((line[1] + line[3]) / 2) * scale_factor
+        # x_diff = (line[0] - line[2]) * scale_factor
+        # y_diff = (line[1] - line[3]) * scale_factor
+        # dist = math.sqrt(x_diff * x_diff + y_diff * y_diff)
+        # yaw = math.atan2(y_diff, x_diff)
+        # pitch = 0
+        # roll = 0
+        # wall_param={'x': x_cent, 'y': y_cent,'z':0, 'dist': dist, 'yaw': yaw, 'pitch': pitch,'roll': roll}
+
+        # x_diff = (line[0] - line[2]) * scale_factor
+        # y_diff = (line[1] - line[3]) * scale_factor
+
+        # yaw_line = math.atan2(y_diff, x_diff)
+        # angle = yaw_line
+        # x = 0
+        # y = WALL_THICKNESS/2
+        # # Rotation matrix multiplication to get rotated x & y
+        # xr = (x * math.cos(angle)) - (y * math.sin(angle))
+        # yr = (x * math.sin(angle)) + (y * math.cos(angle))
+
+        # lineP = Polygon(
+        #     (
+        #         (line[0] * scale_factor-xr, line[1] * scale_factor-yr, 0),
+        #         (line[0] * scale_factor-xr, line[1] * scale_factor+yr, 0),
+        #         (line[2] * scale_factor+xr, line[3] * scale_factor+yr, 0),
+        #         (line[2] * scale_factor+xr, line[3] * scale_factor-yr, 0)
+        #     )
+        # )
+        lineP = LineString([Point(line[0]* scale_factor, line[1] * scale_factor), Point(line[2] * scale_factor, line[3] * scale_factor)])
+        lineP = lineP.buffer(WALL_THICKNESS)
+        lineFile = open(mmap_model_folder_path + '/line_'+str(j), 'wb')
+        lineFile.write(lineP.wkb)
         lineFile.close()
 
 def checkMultiRoomIntersection(lines, scale_factor, polygon):
 
     for j, line in enumerate(lines):
-        line = Polygon(
-        ((line[0][0] * scale_factor, line[0][1] * scale_factor,0),
-            (line[0][0] * scale_factor, line[0][3] * scale_factor,0),
-            (line[0][2] * scale_factor, line[0][1] * scale_factor,0),
-            (line[0][2] * scale_factor, line[0][3] * scale_factor,0))
-        )
+        line = line[0]
+        # x_diff = (line[0] - line[2]) * scale_factor
+        # y_diff = (line[1] - line[3]) * scale_factor
+        
+        # yaw_line = math.atan2(y_diff, x_diff)
+        # angle = yaw_line
+        # x = 0
+        # y = WALL_THICKNESS / 2
+        # # Rotation matrix multiplication to get rotated x & y
+        # xr = (x * math.cos(angle)) - (y * math.sin(angle))
+        # yr = (x * math.sin(angle)) + (y * math.cos(angle))
+
+        # line = Polygon(
+        # (
+        #     (line[0] * scale_factor-xr, line[1] * scale_factor-yr, 0),
+        #     (line[0] * scale_factor-xr, line[1] * scale_factor+yr, 0),
+        #     (line[2] * scale_factor+xr, line[3] * scale_factor+yr, 0),
+        #     (line[2] * scale_factor+xr, line[3] * scale_factor-yr, 0)
+        # )
+        # )
+
+        line = LineString([Point(line[0] * scale_factor, line[1] * scale_factor), Point(line[2] * scale_factor, line[3] * scale_factor)])
+
         intersects=polygon.intersects(line)
 
         if(intersects):
@@ -440,14 +484,14 @@ def createMultiRoom(image, lines):
         line = line[0]
         x_cent = ((line[0] + line[2]) / 2) * scale_factor
         y_cent = ((line[1] + line[3]) / 2) * scale_factor
-        x_diff = (line[0] - line[2]) * scale_factor
-        y_diff = (line[1] - line[3]) * scale_factor
+        x_diff = (line[2] - line[0]) * scale_factor
+        y_diff = (line[3] - line[1]) * scale_factor
         dist = math.sqrt(x_diff * x_diff + y_diff * y_diff)
         yaw = math.atan2(y_diff, x_diff)
         pitch = 0
         roll = 0
         wall_param={'x': x_cent, 'y': y_cent,'z':0, 'dist': dist, 'yaw': yaw, 'pitch': pitch,'roll': roll}
-        walls_model = add_wall(walls_model, wall_param, wall_name='Wall_' + str(i))
+        walls_model = add_wall(walls_model, wall_param, wall_name='Wall_' + str(i), width=WALL_THICKNESS, height=WALL_HEIGHT)
 
 
         if(args.mesh and args.use_db) :
@@ -551,7 +595,7 @@ def createMultiRoom(image, lines):
 
     createWallPolygonMultiRoom(lines, scale_factor, path)
     
-    createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bounds, path)
+    createBitmapRobotPositionFileM(world_gen, lines, scale_factor, centroid, bounds, path)
 
     return wall_sdf_
 
