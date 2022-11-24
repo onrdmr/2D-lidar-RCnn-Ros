@@ -32,30 +32,90 @@
 
 #include "ros/ros.h"
 #include "mastering_ros_demo_pkg/demo_srv.h"
+#include <std_srvs/Empty.h>
 #include <iostream>
 #include <sstream>
+#include "rosgraph_msgs/Clock.h"  // ros::Time::now() used
+#include <thread>
+
 using namespace std;
+
+struct Message
+{
+  int wallSequence;
+  int robotPositionSequence;
+};
 
 bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
                            mastering_ros_demo_pkg::demo_srv::Response& res)
 {
   std::stringstream ss;
-  ss << "Received Here";
+  ss << "walls1";
   res.out = ss.str();
   // write here to exploration number and remaining exploration number
   // if remaining exloration number decrease, run map creation exec
   // batch init is send by server to factory.cc
   // exploration_scan before starting read from this server information abot which map is used.
   ROS_INFO("From Client [%s], Server says [%s]", req.in.c_str(), res.out.c_str());
+
+  // double simTime = ros::Time::now().toSec();
+  // if (simTime > 20)
+  // {
+  //   ros::NodeHandle n;
+  //   ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
+  //   std_srvs::Empty srv;
+
+  //   if (resetGazebo.call(srv))
+  //   {
+  //     ROS_INFO("Resettig Gazebo World");
+  //   }
+  // }
   return true;
 }
 
-int main(int argc, char** argv)
+void number_callback(const rosgraph_msgs::Clock::ConstPtr& msg)
+{
+  // ROS_INFO_STREAM("Received " << msg->clock << ros::Time::now());
+
+  std::stringstream str;
+  str << msg->clock;
+  double simTime = std::stod(str.str());
+  if (simTime > 10)
+  {
+    ros::NodeHandle n;
+    ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
+    std_srvs::Empty srv;
+
+    if (resetGazebo.call(srv))
+    {
+      ROS_INFO_STREAM("Received " << msg->clock << ros::Time::now());
+      ROS_INFO("Resettig Gazebo World");
+      ros::Duration(1).sleep();
+    }
+  }
+}
+
+void thread_demo_service_server(int argc, char** argv)
 {
   ros::init(argc, argv, "demo_service_server");
   ros::NodeHandle n;
   ros::ServiceServer service = n.advertiseService("demo_service", demo_service_callback);
-  ROS_INFO("Ready to receive from client.");
   ros::spin();
+}
+
+void thread_demo_clock_subscriber(int argc, char** argv)
+{
+  ros::init(argc, argv, "clock_subscriber");
+  ros::NodeHandle node_obj;
+  ros::Subscriber number_subscriber = node_obj.subscribe("/clock", 1, number_callback);
+  ros::spin();
+}
+
+int main(int argc, char** argv)
+{
+  // ros::Rate r(1);
+  ROS_INFO("Ready to receive from client.");
+  thread_demo_clock_subscriber(argc, argv);
+  thread_demo_service_server(argc, argv);
   return 0;
 }

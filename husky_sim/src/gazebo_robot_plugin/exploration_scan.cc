@@ -44,9 +44,16 @@
 // using geos::io::WKBReader;
 // using geos::io::WKBWriter;
 
+#include <filesystem>
+
+#include "ros/ros.h"
+#include "mastering_ros_demo_pkg/demo_srv.h"
+
 #define PI 3.14159265359
 #define ROBOT_SIZE 0.55  // 0.7
 #define ROBOT_WING 0.4
+
+namespace fs = std::filesystem;
 
 namespace gazebo
 {
@@ -138,6 +145,19 @@ public:
 
     GEOSWKTReader* readerWKT = GEOSWKTReader_create();
     GEOSGeometry* geom_a = GEOSWKTReader_read(readerWKT, robotWKT.c_str());
+
+    // server client ile hangi map olduğu bilgisi alınacak.
+    // ros::NodeHandle n;
+    // ros::ServiceClient client = n.serviceClient<mastering_ros_demo_pkg::demo_srv>("demo_service");
+    // mastering_ros_demo_pkg::demo_srv srv;
+    // std::stringstream ss;
+    // ss << "Sending from Here exploration scan";
+    // srv.request.in = ss.str();
+
+    // if (client.call(srv))
+    // {
+    //   ROS_INFO("From Client [%s], Server says [%s]", srv.request.in.c_str(), srv.response.out.c_str());
+    // }
 
     for (int i = 0; i < 23; i++)
     {

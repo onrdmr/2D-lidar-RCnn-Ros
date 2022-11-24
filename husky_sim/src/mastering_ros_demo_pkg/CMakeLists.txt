@@ -134,13 +134,13 @@ include_directories(
 # target_link_libraries(demo_msg_subscriber ${catkin_LIBRARIES})
 
 add_executable(demo_service_server src/demo_service_server.cpp) 
-add_executable(demo_service_client src/demo_service_client.cpp) 
+# add_executable(demo_service_client src/demo_service_client.cpp) 
  
 add_dependencies(demo_service_server mastering_ros_demo_pkg_generate_messages_cpp) 
-add_dependencies(demo_service_client mastering_ros_demo_pkg_generate_messages_cpp) 
+# add_dependencies(demo_service_client mastering_ros_demo_pkg_generate_messages_cpp) 
  
 target_link_libraries(demo_service_server ${catkin_LIBRARIES}) 
-target_link_libraries(demo_service_client ${catkin_LIBRARIES}) 
+# target_link_libraries(demo_service_client ${catkin_LIBRARIES}) 
 
 # add_executable(demo_action_server src/demo_action_server.cpp)
 # add_dependencies(demo_action_server mastering_ros_demo_pkg_generate_messages_cpp)
