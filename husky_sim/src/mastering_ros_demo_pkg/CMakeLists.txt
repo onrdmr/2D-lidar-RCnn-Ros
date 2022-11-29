@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(mastering_ros_demo_pkg)
 
+
+set(CATKIN_TOPLEVEL TRUE)
+# set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_EXTENSIONS OFF)
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -141,7 +146,7 @@ add_dependencies(demo_service_server mastering_ros_demo_pkg_generate_messages_cp
  
 target_link_libraries(demo_service_server ${catkin_LIBRARIES}) 
 # target_link_libraries(demo_service_client ${catkin_LIBRARIES}) 
-
+target_compile_features(demo_service_server PRIVATE cxx_std_17)
 # add_executable(demo_action_server src/demo_action_server.cpp)
 # add_dependencies(demo_action_server mastering_ros_demo_pkg_generate_messages_cpp)
 # target_link_libraries(demo_action_server ${catkin_LIBRARIES} )

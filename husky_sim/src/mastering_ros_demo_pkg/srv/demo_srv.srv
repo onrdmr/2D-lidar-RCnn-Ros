@@ -1,3 +1,8 @@
 string in
+
 ---
-string out
+int32 wallSequence
+int32 robotPositionId
+int32 bitmapId
+string mapType
+string buildingEditorPath

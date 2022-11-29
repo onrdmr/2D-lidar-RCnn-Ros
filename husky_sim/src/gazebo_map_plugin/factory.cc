@@ -5,6 +5,10 @@
 #include "ros/ros.h"
 #include <sstream>
 #include <iostream>
+#include <fstream>
+#include <string>
+
+#include "mastering_ros_demo_pkg/demo_srv.h"
 
 namespace gazebo
 {
@@ -19,6 +23,7 @@ public:
   void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf)
   {
     modelWallSequence = 1;
+    this->buildingEditorPath = "/home/onur/building_editor_models";
 
     std::cout << "Factory World Plugin Loaded : World " << _parent->Name() << std::endl;
     this->worldPtr = _parent;
@@ -63,11 +68,50 @@ public:
     // Send the message
     factoryPub->Publish(msg);
     std::cout << "Model with modelWallSequence " << modelWallSequence << " is loaded " << std::endl;
+
+    // sdf::SDF model;
+
+    // std::string sdfPath = this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) +
+    //                       "/sub_models/static_cylinder_1.sdf";
+    // // std::cout << sdfPath << std::endl;
+    // std::ifstream ifSdfStream(sdfPath, std::ifstream::in);
+    // std::stringstream sdfStream;
+    // std::string sdf;
+    // sdfStream << ifSdfStream.rdbuf();
+
+    // sdf = sdfStream.str();
+
+    // std::cout << "dead" << sdf << std::endl;
+
+    // model.SetFromString(sdf);
+    // worldPtr->InsertModelSDF(model);
+
+    // ifSdfStream.close();
     modelWallSequence++;
   }
 
   void Reset()
   {
+    ros::NodeHandle n;
+    ros::ServiceClient client = n.serviceClient<mastering_ros_demo_pkg::demo_srv>("demo_service");
+    mastering_ros_demo_pkg::demo_srv srv;
+    std::stringstream ss;
+    ss << "SEND_REQ";
+    srv.request.in = ss.str();
+
+    if (client.call(srv))
+    {
+      /*
+        int32 wallSequence
+        int32 robotPositionId
+        int32 bitmapId
+        string mapType
+        string buildingEditorPath
+      */
+      ROS_INFO("IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", srv.request.in.c_str(),
+               srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
+               srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str());
+    }
     std::cout << "world is resetting" << std::endl;
     // worldPtr->PauseTime();
     insertModelViaMP(worldPtr);
@@ -80,6 +124,7 @@ private:
   transport::SubscriberPtr sub;
   physics::WorldPtr worldPtr;
   sdf::ElementPtr sdf;
+  std::string buildingEditorPath;
   long int modelWallSequence;
 };
 

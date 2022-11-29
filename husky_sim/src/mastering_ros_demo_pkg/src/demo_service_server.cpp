@@ -37,62 +37,186 @@
 #include <sstream>
 #include "rosgraph_msgs/Clock.h"  // ros::Time::now() used
 #include <thread>
+#include <filesystem>
+#include <map>
 
 using namespace std;
+namespace fs = std::filesystem;
 
 class MessageHandler
 {
 public:
-  static void thread_demo_service_server(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  MessageHandler(std::string buildingPath) : buildingEditorPath(buildingPath)
+  {
+    std::cout << "building editor path is loaded : " << buildingPath << std::endl;
+
+    // std::map<long int, fs::path> dataset;
+    for (const auto& entry : fs::directory_iterator(buildingPath))
+    {
+      // std::cout << entry << std::endl;
+      std::stringstream s;
+      s << entry;
+      std::string str = s.str();
+      std::string folder_name = "wall";
+      std::size_t found = str.find(folder_name);
+
+      if (found != string::npos)
+      {
+        int key = std::stoi(str.substr(found + folder_name.size()));
+        // std::cout << key << std::endl;
+        // std::cout << str.at(sequenceWall) << std::endl;
+        dataset.insert({ key, entry });
+      }
+    }
+
+    for (auto itr = dataset.begin(); itr != dataset.end(); ++itr)
+    {
+      std::cout << "loading dataset catalog to server." << std::endl;
+      std::cout << itr->second << std::endl;
+    }
+
+    std::cout << "Total dataset count : " << dataset.size() << std::endl;
+
+    this->totalWallSequence = dataset.size();
+    this->wallSequenceId = 1;
+    this->robotPositionId = 0;
+    this->dbItr = dataset.begin();
+    this->mapType = "single-room";
+    this->bitmapId = -1;
+
+    this->totalRobotPosition = 0;
+    this->resetTime = 10;
+
+    set_message();
+
+    printMessageDebug();
+  }
+
+public:
+  void demo_service_server(int argc, char** argv, ros::MultiThreadedSpinner spinner)
   {
     ros::init(argc, argv, "demo_service_server");
     ros::NodeHandle n;
-    ros::ServiceServer service = n.advertiseService("demo_service", demo_service_callback);
+    ros::ServiceServer service = n.advertiseService("demo_service", &MessageHandler::demo_service_callback, this);
     spinner.spin();
   }
 
-  static void thread_demo_clock_subscriber(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  void demo_clock_subscriber(int argc, char** argv, ros::MultiThreadedSpinner spinner)
   {
     ros::init(argc, argv, "clock_subscriber");
 
     ros::NodeHandle node_obj;
     std::cout << "deneme " << std::endl;
-    ros::Subscriber number_subscriber = node_obj.subscribe("/clock", 1, number_callback);
+    ros::Subscriber number_subscriber = node_obj.subscribe("/clock", 1, &MessageHandler::reset_sim_callback, this);
     spinner.spin();
   }
 
+  std::thread demo_clock_subscriber_thread(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  {
+    return std::thread([=] { demo_clock_subscriber(argc, argv, spinner); });
+  }
+
+  std::thread demo_service_server_thread(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  {
+    return std::thread([=] { demo_service_server(argc, argv, spinner); });
+  }
+
 private:
-  static void number_callback(const rosgraph_msgs::Clock::ConstPtr& msg)
+  void set_message()
+  {
+    bool singleRoom = true;
+    std::cout << "setting message " << this->dbItr->second << std::endl;
+    this->totalRobotPosition = 0;
+    for (const auto& entry : fs::directory_iterator(this->dbItr->second))
+    {
+      std::cout << entry << std::endl;
+      std::stringstream s;
+      s << entry;
+      std::string str = s.str();
+
+      if (str.find("mmap") != string::npos)
+      {
+        singleRoom = false;
+        this->mapType = "multi-room";
+        std::cout << "multi-room" << std::endl;
+      }
+      if (str.find("sub_models") != string::npos)
+      {
+        std::cout << "submodels" << std::endl;
+        this->bitmapId = 0;
+
+        this->totalSubModel = 0;
+        std::filesystem::path p1{ str.substr(1, str.size() - 2) };
+        for (auto& p : std::filesystem::directory_iterator(p1))
+        {
+          this->totalSubModel++;
+        }
+        this->totalSubModel = this->totalSubModel / 2;
+      }
+      std::string robotPositionStr = "robot_position_";
+      int found = str.find(robotPositionStr);
+      if (found != string::npos)
+      {
+        int positionIdx = std::stoi(str.substr(found + robotPositionStr.size()));
+        if (positionIdx > this->totalRobotPosition)
+        {
+          this->totalRobotPosition = positionIdx;
+
+          if (this->totalSubModel != 0)
+          {
+            this->bitmapId = this->robotPositionId;
+          }
+          else
+          {
+            this->bitmapId = -1;
+          }
+        }
+      }
+    }
+    if (singleRoom == true)
+    {
+      std::cout << "single-room" << std::endl;
+      this->mapType = "single-room";
+    }
+  }
+  void reset_sim_callback(const rosgraph_msgs::Clock::ConstPtr& msg)
   {
     // ROS_INFO_STREAM("Received " << msg->clock << ros::Time::now());
 
     std::stringstream str;
     str << msg->clock;
     double simTime = std::stod(str.str());
-    if (simTime > 10)
+    if (this->resetTime != 1 && simTime > this->resetTime)  // ilk koşul exploration scan den dur mesajı gelirse
     {
       ros::NodeHandle n;
       ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
       std_srvs::Empty srv;
 
+      // std::cout << mapType << " " << wallSequenceId << " " << robotPositionId << "" << bitmapId << " " << std::endl;
       if (resetGazebo.call(srv))
       {
         ROS_INFO_STREAM("Received " << msg->clock << ros::Time::now());
-        ROS_INFO("Resettig Gazebo World");
+        ROS_INFO("Resetting Gazebo World");
+        setNewExplorationStates();
         ros::Duration(1).sleep();
+
         // assign new positon or new map if all position are loaded
         // print qui way of how much map is printed in memory
       }
     }
   }
-  static bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
-                                    mastering_ros_demo_pkg::demo_srv::Response& res)
+  bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
+                             mastering_ros_demo_pkg::demo_srv::Response& res)
   {
     std::stringstream ss;
-    ss << "walls1";
-    res.out = ss.str();
 
-    ROS_INFO("From Client [%s], Server says [%s]", req.in.c_str(), res.out.c_str());
+    res.wallSequence = this->wallSequenceId;
+    res.robotPositionId = this->robotPositionId;
+    res.bitmapId = this->bitmapId;
+    res.mapType = this->mapType;
+    res.buildingEditorPath = this->buildingEditorPath;
+
+    ROS_INFO("IN:SERVER || From Client [%s], Server says [%s]", req.in.c_str(), res.mapType.c_str());
 
     // double simTime = ros::Time::now().toSec();
     // if (simTime > 20)
@@ -110,20 +234,88 @@ private:
   }
 
 private:
+  void printMessageDebug()
+  {
+    std::cout << mapType << " wallSequenceId :" << this->wallSequenceId << " robotPositionId :" << this->robotPositionId
+              << "  totalRobotPosition :" << this->totalRobotPosition
+              << " totalWallSequence :" << this->totalWallSequence << " totalSubModel :" << this->totalSubModel
+              << " bitmapId" << this->bitmapId << std::endl;
+  }
+  void setNewExplorationStates()
+  {
+    if (this->wallSequenceId == this->totalWallSequence)
+    {
+      std::cout << "program sonlandı yeni veri girdi kuyruğu beklenmekte" << std::endl;
+      std::cout << "girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek." << std::endl;
+      return;
+    }
+    if (this->bitmapId == -1)
+    {
+      if (this->robotPositionId < this->totalRobotPosition)
+      {
+        this->robotPositionId++;
+      }
+      else
+      {
+        std::cout << "state exploration." << std::endl;
+        this->wallSequenceId++;
+        this->robotPositionId = 0;
+
+        this->dbItr++;
+        std::cout << "itr" << this->dbItr->second << " " << this->wallSequenceId << " " << this->robotPositionId
+                  << std::endl;
+
+        set_message();
+      }
+    }
+    else
+    {
+      if (this->robotPositionId < this->totalRobotPosition)
+      {
+        this->robotPositionId++;
+        this->bitmapId++;
+      }
+      else
+      {
+        std::cout << "state exploration." << std::endl;
+        this->wallSequenceId++;
+        this->robotPositionId = 0;
+
+        this->dbItr++;
+        std::cout << "itr" << this->dbItr->second << " " << this->wallSequenceId << " " << this->robotPositionId
+                  << std::endl;
+
+        set_message();
+      }
+    }
+    printMessageDebug();
+  }
+
+private:
   int wallSequenceId;
+  int totalWallSequence;
+  int totalSubModel;
   int robotPositionId;
   int bitmapId;
+  int totalRobotPosition;
+  int resetTime;
   std::string mapType;
+  std::string buildingEditorPath;
+  std::map<long int, fs::path> dataset;
+  std::map<long int, fs::path>::iterator dbItr;
 };
 
 int main(int argc, char** argv)
 {
   // ros::Rate r(1);
   ros::MultiThreadedSpinner spinner(2);
+  MessageHandler* handler = new MessageHandler("/home/onur/building_editor_models");
+
   ROS_INFO("Ready to receive from client.");
   // thread_demo_clock_subscriber(argc, argv);
-  std::thread update(MessageHandler::thread_demo_clock_subscriber, argc, argv, spinner);
-  std::thread server(MessageHandler::thread_demo_service_server, argc, argv, spinner);
+  std::thread update = handler->demo_clock_subscriber_thread(argc, argv, spinner);
+  std::thread server = handler->demo_service_server_thread(argc, argv, spinner);
+  // handler->std::thread server(&handler->thread_demo_service_server, argc, argv, spinner);
 
   update.join();
   server.join();

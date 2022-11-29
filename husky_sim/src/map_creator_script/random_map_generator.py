@@ -663,7 +663,7 @@ def add_assets(world_gen):
         )
         )
     )
-    print('Asset is available for world generation=', 'static_cylinder' in world_gen.assets.tags)
+    print('Asset is available for world generation(static_cylinder,static_box)=', 'static_cylinder' in world_gen.assets.tags , 'static_box' in world_gen.assets.tags)
 
 def createSingleRoom():
     n_points = args.room_args[0]
@@ -732,7 +732,7 @@ def createSingleRoom():
         add_assets(world_gen)
 
         placement_policy = dict(
-            models=['dyn_box', 'static_cylinder'],
+            models=['static_box', 'static_cylinder'],
             config=[
                 dict(
                     dofs=['x', 'y'],            

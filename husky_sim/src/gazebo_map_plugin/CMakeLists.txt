@@ -12,20 +12,43 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(gazebo_map_plugin)
 
 find_package(catkin REQUIRED COMPONENTS
+ roscpp
+ std_msgs
+  message_generation
+  message_runtime
 )
+
+find_package(catkin REQUIRED COMPONENTS
+)
+
+add_service_files( 
+   FILES 
+   demo_srv.srv 
+ ) 
+
+generate_messages( 
+   DEPENDENCIES 
+   std_msgs 
+) 
 
 
 catkin_package()
 
 
 find_package(gazebo REQUIRED)
-include_directories(${GAZEBO_INCLUDE_DIRS})
+
+
+include_directories(
+  ${GAZEBO_INCLUDE_DIRS}
+)
 link_directories(${GAZEBO_LIBRARY_DIRS})
 list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
 
 add_library(factory SHARED factory.cc)
+add_dependencies(factory mastering_ros_demo_pkg_generate_messages_cpp) 
+
 target_link_libraries(factory
-  ${GAZEBO_LIBRARIES}
+  ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES}
 )
 
 # SET(DEVEL_LIB ${CMAKE_HOME_DIRECTORY}/../devel/lib)
