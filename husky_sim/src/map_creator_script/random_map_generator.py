@@ -65,8 +65,8 @@ parser.add_argument('--use-db','-mdb', action='store_true', help='use random mes
 parser.add_argument('--asset-dir','--asset-dir-path','-dir', type=str, default="/home/onur/building_editor_models/", help='gazebo asset directory path.')
 parser.add_argument('--wall-name', '-wn', type=str, default="wall", help='wall name')
 
-parser.add_argument('--box', '-b', type=int, default=5, help='number of box in the map')
-parser.add_argument('--cylinder', '-c', type=int, default=5, help='number of cylinder in the map')
+parser.add_argument('--box', '-b', type=int, default=3, help='number of box in the map')
+parser.add_argument('--cylinder', '-c', type=int, default=3, help='number of cylinder in the map')
 
 
 args = parser.parse_args()
@@ -385,9 +385,9 @@ def createBitmapRobotPositionFileS(world_gen, wall_model_shapely, centroid, boun
                 sub_model = world_gen.world.models[model].get_footprint()[model]
                 intersects=polygon.intersects(sub_model)
                 if intersects==True:
-                    bitmap.append(0)
+                    bitmap.append(1)
                     continue
-                bitmap.append(1)
+                bitmap.append(0)
 
             bitmap_file=open(path + '/bitmap_'+str(i), 'w')
             bitmap_file.write(" ".join(map(str,bitmap)))
@@ -626,6 +626,7 @@ def createRandomRobotPolygonInMap(centroid, bounds):
     (rand_x + dist_bound_x, rand_y+dist_bound_y),
     (rand_x + dist_bound_x, rand_y-dist_bound_y) ) 
     polygon = Polygon(coord)
+
 
     # Rotate 30 degrees CCW from origin at the center of bbox
     polygon = affinity.rotate(polygon, np.rad2deg(rand_yaw), 'center')

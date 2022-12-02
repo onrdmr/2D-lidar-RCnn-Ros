@@ -39,6 +39,9 @@
 #include <thread>
 #include <filesystem>
 #include <map>
+#include <mutex>
+
+#include <ros/callback_queue.h>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -88,8 +91,6 @@ public:
     this->resetTime = 10;
 
     set_message();
-
-    printMessageDebug();
   }
 
 public:
@@ -107,7 +108,15 @@ public:
 
     ros::NodeHandle node_obj;
     std::cout << "deneme " << std::endl;
-    ros::Subscriber number_subscriber = node_obj.subscribe("/clock", 1, &MessageHandler::reset_sim_callback, this);
+    ros::SubscribeOptions ops;
+    const boost::function<void(const rosgraph_msgs::Clock::ConstPtr&)> reset_sim_callback(
+        boost::bind(&MessageHandler::reset_sim_callback, this, _1));
+    ops.template init("/clock", 1, reset_sim_callback);
+    ops.queue_size = 1;
+    ops.callback_queue = NULL;
+
+    // ops.allow_concurrent_callbacks = true;
+    ros::Subscriber number_subscriber = node_obj.subscribe(ops);
     spinner.spin();
   }
 
@@ -182,54 +191,70 @@ private:
   void reset_sim_callback(const rosgraph_msgs::Clock::ConstPtr& msg)
   {
     // ROS_INFO_STREAM("Received " << msg->clock << ros::Time::now());
-
+    // const std::lock_guard<std::mutex> lock(mutex);
     std::stringstream str;
     str << msg->clock;
     double simTime = std::stod(str.str());
-    if (this->resetTime != 1 && simTime > this->resetTime)  // ilk koşul exploration scan den dur mesajı gelirse
+    if (this->resetTime != -1 && simTime > this->resetTime)  // ilk koşul exploration scan den dur mesajı gelirse
     {
+      const std::lock_guard<std::mutex> lock(mutex);
       ros::NodeHandle n;
       ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
       std_srvs::Empty srv;
-
       // std::cout << mapType << " " << wallSequenceId << " " << robotPositionId << "" << bitmapId << " " << std::endl;
+      ROS_INFO_STREAM("Received " << msg->clock << " " << ros::Time::now());
+      ROS_INFO("Resetting Gazebo World");
       if (resetGazebo.call(srv))
       {
-        ROS_INFO_STREAM("Received " << msg->clock << ros::Time::now());
-        ROS_INFO("Resetting Gazebo World");
-        setNewExplorationStates();
+        ROS_INFO("Waiting for duration.");
         ros::Duration(1).sleep();
+
+        // ros::getGlobalCallbackQueue()->clear();
 
         // assign new positon or new map if all position are loaded
         // print qui way of how much map is printed in memory
       }
+      setNewExplorationStates();
     }
   }
   bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
                              mastering_ros_demo_pkg::demo_srv::Response& res)
   {
-    std::stringstream ss;
+    if (req.in == "SEND_REQ")
+    {
+      std::cout << "send req içindeyim " << std::endl;
+      std::stringstream ss;
 
-    res.wallSequence = this->wallSequenceId;
-    res.robotPositionId = this->robotPositionId;
-    res.bitmapId = this->bitmapId;
-    res.mapType = this->mapType;
-    res.buildingEditorPath = this->buildingEditorPath;
+      res.wallSequence = this->wallSequenceId;
+      res.robotPositionId = this->robotPositionId;
+      res.bitmapId = this->bitmapId;
+      res.mapType = this->mapType;
+      res.buildingEditorPath = this->buildingEditorPath;
+      res.out = "NOT_REMOVED";
+      this->readyToExplore = false;
+      ROS_INFO("IN:SERVER || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", req.in.c_str(), res.wallSequence,
+               res.robotPositionId, res.bitmapId, res.mapType.c_str(), res.buildingEditorPath.c_str());
+    }
+    else if (req.in == "READY_TO_EXPLORE")
+    {
+      this->readyToExplore = true;
+      std::cout << "Not Implemented yet" << std::endl;
+    }
+    else if (req.in == "EXPLORE")
+    {
+    }
 
-    ROS_INFO("IN:SERVER || From Client [%s], Server says [%s]", req.in.c_str(), res.mapType.c_str());
-
-    // double simTime = ros::Time::now().toSec();
-    // if (simTime > 20)
-    // {
-    //   ros::NodeHandle n;
-    //   ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
-    //   std_srvs::Empty srv;
-
-    //   if (resetGazebo.call(srv))
-    //   {
-    //     ROS_INFO("Resettig Gazebo World");
-    //   }
-    // }
+    else if (req.in == "REMOVE_MODELS")
+    {
+      ros::NodeHandle n;
+      ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
+      std_srvs::Empty srv;
+      res.out = "REMOVED";
+      if (resetGazebo.call(srv))
+      {
+        ROS_INFO("Resettig Gazebo World with REMOVED MODELS");
+      }
+    }
     return true;
   }
 
@@ -243,6 +268,7 @@ private:
   }
   void setNewExplorationStates()
   {
+    std::cout << "setNewExploration State" << std::endl;
     if (this->wallSequenceId == this->totalWallSequence)
     {
       std::cout << "program sonlandı yeni veri girdi kuyruğu beklenmekte" << std::endl;
@@ -253,6 +279,7 @@ private:
     {
       if (this->robotPositionId < this->totalRobotPosition)
       {
+        std::cout << "robot Position id arttı setnewexpl" << std::endl;
         this->robotPositionId++;
       }
       else
@@ -299,6 +326,8 @@ private:
   int bitmapId;
   int totalRobotPosition;
   int resetTime;
+  bool readyToExplore;  // std::mutex explore;
+  std::mutex mutex;
   std::string mapType;
   std::string buildingEditorPath;
   std::map<long int, fs::path> dataset;

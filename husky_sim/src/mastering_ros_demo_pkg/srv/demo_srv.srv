@@ -6,3 +6,4 @@ int32 robotPositionId
 int32 bitmapId
 string mapType
 string buildingEditorPath
+string out

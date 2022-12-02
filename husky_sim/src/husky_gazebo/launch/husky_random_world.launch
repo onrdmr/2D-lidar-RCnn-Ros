@@ -3,8 +3,8 @@
   <include file="$(find husky_gazebo)/launch/random_world.launch" />
   <!-- <include file="$(find husky_gazebo)/launch/husky_empty_world.launch" /> -->
 
-  <!-- <include file="$(find husky_gazebo)/launch/spawn_husky.launch"/> -->
-  <node pkg="timed_roslaunch" type="timed_roslaunch.sh" args="5 $(find mastering_ros_demo_pkg)/launch/demo_topic.launch" name="timed_roslaunch" output="screen"/>
+  <include file="$(find husky_gazebo)/launch/spawn_husky.launch"/>
+  <node pkg="timed_roslaunch" type="timed_roslaunch.sh" args="15 $(find mastering_ros_demo_pkg)/launch/demo_topic.launch" name="timed_roslaunch" output="screen"/>
   
 
 </launch>
