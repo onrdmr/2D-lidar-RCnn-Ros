@@ -447,7 +447,7 @@ public:
     std::stringstream ss;
     ss << "SEND_REQ";
     srv.request.in = ss.str();
-    std::cout << "requesting" << std::endl;
+    std::cout << "requesting" << ss.str() << std::endl;
     if (client.call(srv))
     {
       ROS_INFO("IN EXLPORATON_SCAN | From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", srv.request.in.c_str(),
@@ -484,7 +484,16 @@ public:
 
     explorationLogic(anim);
     this->model->SetAnimation(anim);
+    ss.clear();
+    ss.str("");
+    ss << "READY_TO_EXPLORE";
+    srv.request.in = ss.str();
+    std::cout << "sending request to server " << ss.str() << std::endl;
 
+    if (client.call(srv))
+    {
+      std::cout << "server response got" << std::endl;
+    }
     // bu harita eklendiğinde çalışacak
     // const physics::WorldPtr worldPtr = model->GetWorld();
     // std::cout << "Animated_box plugin is loaded in " << worldPtr->Name() << std::endl;

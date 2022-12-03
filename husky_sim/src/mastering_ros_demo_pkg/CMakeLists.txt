@@ -13,13 +13,17 @@ set(CATKIN_TOPLEVEL TRUE)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  actionlib
-  actionlib_msgs
+#   actionlib
+#   actionlib_msgs
   roscpp
   std_msgs
+  nav_msgs
+  sensor_msgs
   message_generation
   message_runtime
+  rosbag
 )
+
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)

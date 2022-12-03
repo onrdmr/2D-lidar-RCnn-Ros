@@ -137,7 +137,7 @@ public:
     ss.clear();
     ss << "SEND_REQ";
     srv.request.in = ss.str();
-    std::cout << "sending request to server" << ss.str() << std::endl;
+    std::cout << "Factory - sending request to server " << ss.str() << std::endl;
 
     if (client.call(srv))
     {

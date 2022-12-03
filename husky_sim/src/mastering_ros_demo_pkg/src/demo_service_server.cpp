@@ -41,6 +41,11 @@
 #include <map>
 #include <mutex>
 
+#include <nav_msgs/Odometry.h>
+#include <sensor_msgs/LaserScan.h>
+
+#include <rosbag/bag.h>
+
 #include <ros/callback_queue.h>
 
 using namespace std;
@@ -198,6 +203,11 @@ private:
     if (this->resetTime != -1 && simTime > this->resetTime)  // ilk koşul exploration scan den dur mesajı gelirse
     {
       const std::lock_guard<std::mutex> lock(mutex);
+      if (this->recordSub != NULL)
+      {
+        std::cout << "thread sonlandır." << std::endl;
+        this->recordSub.shutdown();
+      }
       ros::NodeHandle n;
       ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
       std_srvs::Empty srv;
@@ -216,6 +226,31 @@ private:
       }
       setNewExplorationStates();
     }
+  }
+
+  void recordData()
+  {
+    int argc = 0;
+    char** argv = NULL;
+    ros::init(argc, argv, "record_node");
+    // this->recordDataAvailable = new Available();
+    ros::NodeHandle n;
+    ros::Duration(1).sleep();
+    rosbag::Bag bag("deneme.bag", rosbag::bagmode::BagMode::Write);
+    bag.close();
+
+    this->recordSub = n.subscribe("/rear/scan", 1, &MessageHandler::laserScanCallbackR, this);
+    std::cout << "recording data" << std::endl;
+    // recordSpinner->spinOnce();
+    ros::spinOnce();
+    std::cout << "çağrı thread ros spin kırıldı sonlandırır" << std::endl;
+  }
+  void laserScanCallbackR(const sensor_msgs::LaserScan::ConstPtr& laserScanR)
+  {
+    std::cout << "burada kaydetme olacak" << std::endl;
+    rosbag::Bag bag("deneme.bag", rosbag::bagmode::BagMode::Append);
+    bag.write("/rear/scan", ros::Time::now(), laserScanR);
+    bag.close();
   }
   bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
                              mastering_ros_demo_pkg::demo_srv::Response& res)
@@ -239,6 +274,8 @@ private:
     {
       this->readyToExplore = true;
       std::cout << "Not Implemented yet" << std::endl;
+      this->recordThread = std::thread([=] { this->recordData(); });
+      this->recordThread.detach();
     }
     else if (req.in == "EXPLORE")
     {
@@ -332,6 +369,9 @@ private:
   std::string buildingEditorPath;
   std::map<long int, fs::path> dataset;
   std::map<long int, fs::path>::iterator dbItr;
+  ros::Subscriber recordSub;
+  std::thread recordThread;
+  Available* recordDataAvailable;
 };
 
 int main(int argc, char** argv)
