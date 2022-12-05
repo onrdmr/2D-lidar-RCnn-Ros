@@ -45,6 +45,11 @@
 #include <sensor_msgs/LaserScan.h>
 
 #include <rosbag/bag.h>
+// #include <message_filters/subscriber.h>
+// #include <message_filters/time_synchronizer.h>
+
+// senkron subscriber ile yazılma yapılacak
+// question 47406
 
 #include <ros/callback_queue.h>
 
@@ -203,10 +208,12 @@ private:
     if (this->resetTime != -1 && simTime > this->resetTime)  // ilk koşul exploration scan den dur mesajı gelirse
     {
       const std::lock_guard<std::mutex> lock(mutex);
-      if (this->recordSub != NULL)
+      if (this->recordSubR != NULL)
       {
         std::cout << "thread sonlandır." << std::endl;
-        this->recordSub.shutdown();
+        this->recordSubR.shutdown();
+        this->recordSubF.shutdown();
+        this->recordSubOdom.shutdown();
       }
       ros::NodeHandle n;
       ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
@@ -236,10 +243,18 @@ private:
     // this->recordDataAvailable = new Available();
     ros::NodeHandle n;
     ros::Duration(1).sleep();
-    rosbag::Bag bag("deneme.bag", rosbag::bagmode::BagMode::Write);
+
+    // ön lazer , alt lazer
+    rosbag::Bag bag("front_scan.bag", rosbag::bagmode::BagMode::Write);
+    rosbag::Bag bag2("rear_scan.bag", rosbag::bagmode::BagMode::Write);
+    rosbag::Bag bag3("odometry.bag", rosbag::bagmode::BagMode::Write);
+
     bag.close();
 
-    this->recordSub = n.subscribe("/rear/scan", 1, &MessageHandler::laserScanCallbackR, this);
+    this->recordSubR = n.subscribe("/rear/scan", 100, &MessageHandler::laserScanCallbackR, this);
+    this->recordSubF = n.subscribe("/front/scan", 100, &MessageHandler::laserScanCallbackF, this);
+    this->recordSubF = n.subscribe("/odometry/filtered", 100, &MessageHandler::laserScanCallbackOdom, this);
+
     std::cout << "recording data" << std::endl;
     // recordSpinner->spinOnce();
     ros::spinOnce();
@@ -248,8 +263,22 @@ private:
   void laserScanCallbackR(const sensor_msgs::LaserScan::ConstPtr& laserScanR)
   {
     std::cout << "burada kaydetme olacak" << std::endl;
-    rosbag::Bag bag("deneme.bag", rosbag::bagmode::BagMode::Append);
+    rosbag::Bag bag("rear_scan.bag", rosbag::bagmode::BagMode::Append);
     bag.write("/rear/scan", ros::Time::now(), laserScanR);
+    bag.close();
+  }
+  void laserScanCallbackF(const sensor_msgs::LaserScan::ConstPtr& laserScanF)
+  {
+    std::cout << "burada kaydetme olacak" << std::endl;
+    rosbag::Bag bag("front_scan.bag", rosbag::bagmode::BagMode::Append);
+    bag.write("/rear/scan", ros::Time::now(), laserScanF);
+    bag.close();
+  }
+  void laserScanCallbackOdom(const nav_msgs::Odometry::ConstPtr& odom)
+  {
+    std::cout << "burada kaydetme olacak" << std::endl;
+    rosbag::Bag bag("odometry.bag", rosbag::bagmode::BagMode::Append);
+    bag.write("/odometry/filtered", ros::Time::now(), odom);
     bag.close();
   }
   bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
@@ -369,9 +398,12 @@ private:
   std::string buildingEditorPath;
   std::map<long int, fs::path> dataset;
   std::map<long int, fs::path>::iterator dbItr;
-  ros::Subscriber recordSub;
+  ros::Subscriber recordSubR;
+  ros::Subscriber recordSubF;
+  ros::Subscriber recordSubOdom;
+
   std::thread recordThread;
-  Available* recordDataAvailable;
+  // Available* recordDataAvailable;
 };
 
 int main(int argc, char** argv)
