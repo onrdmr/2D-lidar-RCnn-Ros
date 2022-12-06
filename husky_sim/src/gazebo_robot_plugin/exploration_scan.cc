@@ -354,7 +354,7 @@ public:
         // name the animation "test",
         // make it last 10 seconds,
         // and set it on a repeat loop
-        new gazebo::common::PoseAnimation("test", simTimePerIter, true));
+        new gazebo::common::PoseAnimation("test", simTimePerIter, false));
     this->anim = anim;
 
     // explorationLogic(anim);

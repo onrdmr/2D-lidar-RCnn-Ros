@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   nav_msgs
   sensor_msgs
+  message_filters
   message_generation
   message_runtime
   rosbag
