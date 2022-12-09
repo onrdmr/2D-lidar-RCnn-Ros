@@ -97,7 +97,10 @@ public:
     {
       int removedWallSequence = modelWallSequence - 1;
       const std::string removeModel = "walls" + std::to_string(removedWallSequence);
-      std::cout << "removedWallSequence: " << removeModel << std::endl;
+      std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+      a << "removedWallSequence: " << removeModel << std::endl;
+
+      // std::cout << "removedWallSequence: " << removeModel << std::endl;
       if (worldPtr->ModelByName(removeModel) != NULL)
       {
         physics::ModelPtr modelPtr = worldPtr->ModelByName(removeModel);
@@ -177,9 +180,12 @@ public:
         for (physics::ModelPtr model : models)
         {
           std::string modelName = model->GetName();
-          if (modelName != "ground_plane")
+          if (modelName != "ground_plane" && modelName != "husky")
           {
             std::cout << "removing " << model->GetName() << std::endl;
+            std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+            a << model->GetName() << std::endl;
+
             model->SetName("removed");
             model->SetSelected(true);
             // model->Reset();

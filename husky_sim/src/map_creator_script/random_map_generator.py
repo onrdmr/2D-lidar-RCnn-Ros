@@ -1,4 +1,4 @@
-
+import signal
 from shapely import affinity
 import argparse
 import cv2
@@ -21,6 +21,9 @@ from math import pi as PI
 from shapely.geometry import Polygon, LineString, Point
 from numpy import random
 from math import pi as PI
+from pcg_gazebo.generators.creators import extrude
+from pcg_gazebo.generators.creators import box_factory
+
 
 VERSION = "1.0" 
 SDF_VERSION = "1.6"
@@ -32,8 +35,8 @@ SINGLE_ROOM_ARG_COUNT = 3
 WALL_THICKNESS = 0.15
 WALL_HEIGHT = 2
 
-HUSKY_SIZE_X = 1.1#0.98740000
-HUSKY_SIZE_Y = 0.8#0.57090000
+HUSKY_SIZE_X = 1.2#0.98740000
+HUSKY_SIZE_Y = 0.7#0.57090000
 
 stat_sign_factor = 1.645
 
@@ -47,16 +50,16 @@ parser = argparse.ArgumentParser(description='Process some integers.')
 #                     help='sum the integers (default: find the max)')
 
 
-lastWallSequence = None # static variable of lastWallSequence function
+# lastWallSequence = None # static variable of lastWallSequence function
 
 parser.add_argument('--spawn-count', '-r', '--robot-count', type=int ,default=5)
 parser.add_argument('--scale-factor', '-s', type=float, default=10.0) # it must be greater than 10 otherwise robot can not move other rooms
 
 
-parser.add_argument('choice', choices=['single_room', 'multi_room'])
+parser.add_argument('choice', choices=['single_room', 'multi_room', 'all_room'])
 
 parser.add_argument('room_args', metavar='N', type=int, nargs='+',
-                     help='single_room [number of point for triangulation] [min_bound] [max_bound] or multi_room [map_id]')
+                     help='single_room [number of point for triangulation] [min_bound] [max_bound] or multi_room [map_id] or  all_room [multi_room count] [min_id] [kaç tane single room olacağı] [single max room uzunluğu sayısı] [max nokta sayısı] [%meshli mi meshsiz mi olacağı] [multi_map_max_scale_factor][...]  ')
 
 parser.add_argument('--mesh' ,'-m' , action='store_true', help='distribute random mesh available.')
 
@@ -68,6 +71,7 @@ parser.add_argument('--wall-name', '-wn', type=str, default="wall", help='wall n
 parser.add_argument('--box', '-b', type=int, default=3, help='number of box in the map')
 parser.add_argument('--cylinder', '-c', type=int, default=3, help='number of cylinder in the map')
 
+parser.add_argument('--debug', '-d', action='store_true', help='debug mode print maps to show')
 
 args = parser.parse_args()
 
@@ -227,21 +231,33 @@ def detectHoughLines(image, threshold=5, minLineLength = 5, maxLineGap=5 , rho=1
 
     return lines
 
+def removeLastWall():
+    list_dir = listdir(args.asset_dir)
+    if(len(list_dir) == 0) :
+        return
+    
+    list_dir = [os.path.join(args.asset_dir, f) for f in list_dir]
+    list_dir.sort(key=lambda x: os.path.getmtime(x))
+
+    os.system("rm -rf " + list_dir[-1])
+
 def lastWallSequenceInAsset():
-    global lastWallSequence
-    if lastWallSequence == None: 
-        list_dir = listdir(args.asset_dir)
-        if(len(list_dir) == 0) :
-            return None
-        
-        list_dir = [os.path.join(args.asset_dir, f) for f in list_dir]
-        list_dir.sort(key=lambda x: os.path.getmtime(x))
-        number = "".join([i for i in list_dir[-1] if i.isdigit() and int(i) < 10 and int(i) > -1 ])
-        
-        if(number==""):
-            return 0
-        
-        lastWallSequence = int(number) 
+    # global lastWallSequence
+    # if lastWallSequence == None: 
+    list_dir = listdir(args.asset_dir)
+    if(len(list_dir) == 0) :
+        lastWallSequence = 0
+        return 0
+    
+    list_dir = [os.path.join(args.asset_dir, f) for f in list_dir]
+    list_dir.sort(key=lambda x: os.path.getmtime(x))
+    number = "".join([i for i in list_dir[-1] if i.isdigit() and int(i) < 10 and int(i) > -1 ])
+    
+    if(number==""):
+        lastWallSequence = 0
+        return 0
+    
+    lastWallSequence = int(number) 
     return lastWallSequence
 
 def createGazeboAssetModelConfig():
@@ -252,8 +268,7 @@ def createGazeboAssetModelConfig():
 
     name = gfg.Element("name")
     last_wall_seq = lastWallSequenceInAsset()
-    name.text = args.wall_name + (str(int(last_wall_seq)+1) if last_wall_seq != None else "")
-    
+    name.text = args.wall_name + (str(int(last_wall_seq)+1) if last_wall_seq != None else "1")
     path = path+name.text + "/"
     mkdir(path)
 
@@ -321,7 +336,7 @@ def createFactoryEngine():
     return world_gen
 
 
-def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bounds, path):
+def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bounds, path, wall_name):
 
     if(world_gen == None): 
         for i in range(args.spawn_count):
@@ -337,7 +352,7 @@ def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bound
         return
 
     sub_models = sorted(world_gen.world.models)
-    sub_models = removeIf(sub_models, 'walls')
+    sub_models = removeIf(sub_models, 'wall/'+wall_name)
     sub_models = removeIf(sub_models, 'robot')
     sub_models = removeIf(sub_models, 'ground_plane')
 
@@ -348,13 +363,20 @@ def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bound
         
         bitmap = []
 
+
+        #debug purpose
+        if args.debug:
+            robot_l = box_factory([HUSKY_SIZE_X, HUSKY_SIZE_Y, HUSKY_SIZE_Y],pose=(robot_pos_yaw[0], robot_pos_yaw[1], 0 ,0 ,0, robot_pos_yaw[2] ), color="xkcd")
+            robot=robot_l[0]
+            world_gen.world.add_model(tag="robot", model=robot)
+            world_gen.world.create_scene().show()
+            world_gen.world.rm_model("robot")
         
         for model in sorted(sub_models):
             sub_model = world_gen.world.models[model].get_footprint()[model]
             intersects=polygon.intersects(sub_model)
             if intersects==True:
                 bitmap.append(0)
-                continue
             bitmap.append(1)
 
         bitmap_file=open(path + '/bitmap_'+str(i), 'w')
@@ -369,7 +391,7 @@ def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bound
 
 def createBitmapRobotPositionFileS(world_gen, wall_model_shapely, centroid, bounds, path):
     sub_models = sorted(world_gen.world.models)
-    sub_models = removeIf(sub_models, 'walls/walls_model')
+    sub_models = removeIf(sub_models, 'walls')
     sub_models = removeIf(sub_models, 'robot')
     sub_models = removeIf(sub_models, 'ground_plane')
 
@@ -378,6 +400,15 @@ def createBitmapRobotPositionFileS(world_gen, wall_model_shapely, centroid, boun
         while(checkRandomRobotPosition(wall_model_shapely, polygon)):
             polygon, robot_pos_yaw = createRandomRobotPolygonInMap(centroid, bounds)
         
+        #debug purpose
+        if args.debug:
+            robot_l = box_factory([HUSKY_SIZE_X, HUSKY_SIZE_Y, HUSKY_SIZE_Y],pose=(robot_pos_yaw[0], robot_pos_yaw[1], 0 ,0 ,0, robot_pos_yaw[2] ), color="xkcd")
+            robot=robot_l[0]
+            world_gen.world.add_model(tag="robot", model=robot)
+            world_gen.world.create_scene().show()
+            world_gen.world.rm_model("robot")
+
+
         if args.mesh:
             bitmap = []
 
@@ -433,7 +464,7 @@ def createWallPolygonMultiRoom(lines, scale_factor, path):
         #     )
         # )
         lineP = LineString([Point(line[0]* scale_factor, line[1] * scale_factor), Point(line[2] * scale_factor, line[3] * scale_factor)])
-        lineP = lineP.buffer(WALL_THICKNESS)
+        lineP = lineP.buffer(WALL_THICKNESS+0.1)
         lineFile = open(mmap_model_folder_path + '/line_'+str(j), 'wb')
         lineFile.write(lineP.wkb)
         lineFile.close()
@@ -463,7 +494,7 @@ def checkMultiRoomIntersection(lines, scale_factor, polygon):
         # )
 
         line = LineString([Point(line[0] * scale_factor, line[1] * scale_factor), Point(line[2] * scale_factor, line[3] * scale_factor)])
-
+        line = line.buffer(WALL_THICKNESS)
         intersects=polygon.intersects(line)
 
         if(intersects):
@@ -490,7 +521,7 @@ def createMultiRoom(image, lines):
         yaw = math.atan2(y_diff, x_diff)
         pitch = 0
         roll = 0
-        wall_param={'x': x_cent, 'y': y_cent,'z':0, 'dist': dist, 'yaw': yaw, 'pitch': pitch,'roll': roll}
+        wall_param={'x': x_cent, 'y': y_cent,'z':0, 'dist': dist, 'yaw': yaw, 'pitch': pitch, 'roll': roll}
         walls_model = add_wall(walls_model, wall_param, wall_name='Wall_' + str(i), width=WALL_THICKNESS, height=WALL_HEIGHT)
 
 
@@ -498,28 +529,34 @@ def createMultiRoom(image, lines):
             raise NotImplementedError()
         
 
+    
+
     path = createGazeboAssetModelConfig()
 
-    walls_model_name = "walls" + str(lastWallSequenceInAsset()+1)
+    last_wall_seq = lastWallSequenceInAsset()
+    walls_model_name = "walls" + (str(int(last_wall_seq)+1) if last_wall_seq != None else "1")
     wall_sdf_.add_model(walls_model_name, walls_model)
     wall_sdf_.export_xml(path +  "/model.sdf")
 
     walls_model=ModelGroup.from_sdf(wall_sdf_)
 
+    
     world_gen = None
+    
     if args.mesh:
         world_gen = createFactoryEngine()
-
+        world_gen.world.add_model("wall", walls_model)
+    
         model_w_polygon = walls_model.models[walls_model_name].get_footprint()
         model_w_polygon_free_space=model_w_polygon[walls_model_name]
-        walls_model = extrude(
-            polygon=model_w_polygon_free_space,
-            thickness=0.20,
-            height=2,
-            pose=[0, 0, 1 , 0, 0, 0],
-            extrude_boundaries=True,
-            color='xkcd')
-        walls_model.name = 'walls'
+        # walls_model = extrude(
+        #     polygon=model_w_polygon_free_space,
+        #     thickness=0.20,
+        #     height=2,
+        #     pose=[0, 0, 1 , 0, 0, 0],
+        #     extrude_boundaries=True,
+        #     color='xkcd')
+        # walls_model.name = 'walls'
 
         world_gen.add_constraint(
             name='room_workspace',
@@ -528,7 +565,7 @@ def createMultiRoom(image, lines):
             geometry_type='polygon',
             polygon=model_w_polygon_free_space
         )
-        
+
         world_gen.add_constraint(
             name='tangent_to_ground_plane',
             type='tangent',
@@ -542,7 +579,7 @@ def createMultiRoom(image, lines):
             )
         )
 
-        add_assets(world_gen)
+        add_assets(world_gen, model_w_polygon_free_space.area)
 
 
         NUM_BOXES = args.box
@@ -552,15 +589,15 @@ def createMultiRoom(image, lines):
             models=['static_box', 'static_cylinder'],
             config=[
                 dict(
-                    dofs=['x', 'y'],            
+                    dofs=['x', 'y'],
                     tag='workspace',
                     workspace='room_workspace'
                 ),
                 dict(
-                    dofs=['yaw'],            
-                    tag='uniform',                            
+                    dofs=['yaw'],
+                    tag='uniform',         
                     min=-3.141592653589793,
-                    max=3.141592653589793               
+                    max=3.141592653589793
                 )
             ]
         )
@@ -587,6 +624,7 @@ def createMultiRoom(image, lines):
 
         world_gen.run_engines(attach_models=True)
 
+    
     bounds_l = walls_model.get_bounds()
     bounds = (bounds_l[0][0], bounds_l[0][1], bounds_l[1][0], bounds_l[1][1] )
     centroid = lambda: 0 # struct of x and y with centroid (anonymous class)
@@ -595,7 +633,39 @@ def createMultiRoom(image, lines):
 
     createWallPolygonMultiRoom(lines, scale_factor, path)
     
-    createBitmapRobotPositionFileM(world_gen, lines, scale_factor, centroid, bounds, path)
+
+    if args.mesh:
+        sub_models_path = path + 'sub_models'
+
+        sub_models = sorted(world_gen.world.models)
+
+        sub_models_wkb_file = open(path + walls_model_name + ".wkb", 'wb')
+        sub_model_wkb = world_gen.world.models['wall/'+walls_model_name].get_footprint()['wall/'+walls_model_name].wkb
+        sub_models_wkb_file.write(sub_model_wkb)
+        sub_models_wkb_file.close()
+        
+        sub_models = removeIf(sub_models, 'wall/'+walls_model_name)
+        sub_models = removeIf(sub_models, 'ground_plane')
+
+        mkdir(sub_models_path)
+        # add submodels and their mesh definitions 
+        for i in sub_models: 
+            submodel_sdf = create_sdf_element('sdf')
+            submodel_sdf.add_model(i, world_gen.world.models[i].to_sdf())
+            sub_models_file = open(sub_models_path + "/" + str(i) + ".sdf", 'w')
+            sub_models_wkb_file = open(sub_models_path + "/" + str(i) + ".wkb", 'wb')
+            
+            sub_model_wkb = world_gen.world.models[i].get_footprint()[i].wkb
+            sub_models_file.write(submodel_sdf.to_xml_as_str())
+            sub_models_wkb_file.write(sub_model_wkb)
+            sub_models_file.close()
+            sub_models_wkb_file.close()
+        # add spawn_points of robot and bitmaps using submodels
+        world_gen.engines.reset()
+
+    createBitmapRobotPositionFileM(world_gen, lines, scale_factor, centroid, bounds, path,walls_model_name)
+
+    
 
     return wall_sdf_
 
@@ -607,16 +677,21 @@ def removeIf(list, value):
 
 
 def createRandomRobotPolygonInMap(centroid, bounds):
-    rand_x_left = random.normal(centroid.x, abs(bounds[0] - centroid.x)/stat_sign_factor )
-    rand_x_right = random.normal(centroid.x, abs(bounds[2] - centroid.x)/stat_sign_factor )
-    rand_x = (rand_x_left + rand_x_right) / 2
 
-    rand_y_left = random.normal(centroid.y, abs(bounds[1] - centroid.y)/stat_sign_factor )
-    rand_y_right = random.normal(centroid.y, abs(bounds[3] - centroid.y)/stat_sign_factor )
-    rand_y = (rand_y_left + rand_y_right) / 2
+    while True:
+        rand_x_left = random.normal(centroid.x, abs(bounds[0] - centroid.x)/stat_sign_factor )
+        rand_x_right = random.normal(centroid.x, abs(bounds[2] - centroid.x)/stat_sign_factor )
+        rand_x = (rand_x_left + rand_x_right) / 2
 
-    rand_yaw=random.uniform(-PI,PI)
+        rand_y_left = random.normal(centroid.y, abs(bounds[1] - centroid.y)/stat_sign_factor )
+        rand_y_right = random.normal(centroid.y, abs(bounds[3] - centroid.y)/stat_sign_factor )
+        rand_y = (rand_y_left + rand_y_right) / 2
 
+        rand_yaw=random.uniform(-PI,PI)
+
+        if bounds[0] < rand_x < bounds[2] and bounds[1] < rand_y < bounds[3]:
+
+            break
     dist_bound_x = HUSKY_SIZE_X / 2
     dist_bound_y = HUSKY_SIZE_Y / 2 
 
@@ -627,25 +702,26 @@ def createRandomRobotPolygonInMap(centroid, bounds):
     (rand_x + dist_bound_x, rand_y-dist_bound_y) ) 
     polygon = Polygon(coord)
 
-
     # Rotate 30 degrees CCW from origin at the center of bbox
     polygon = affinity.rotate(polygon, np.rad2deg(rand_yaw), 'center')
 
     position_tuple = (rand_x, rand_y, rand_yaw)
     return polygon, position_tuple
 
-def checkRandomRobotPosition(wall_model_shapely, robotPolygon):
-    return wall_model_shapely.contains(robotPolygon)
 
-def add_assets(world_gen):
-    if(args.use_db) :
+def checkRandomRobotPosition(wall_model_shapely, robotPolygon):
+    return wall_model_shapely.contains(robotPolygon) is False
+
+
+def add_assets(world_gen, area):
+    if(args.use_db):
         addRandomMeshesFromDB(world_gen)
     world_gen.add_asset(
         tag='static_box',
         description=dict(
             type='box',
             args=dict(
-                size="5 * __import__('pcg_gazebo').random.rand(3)",
+                size= str(math.sqrt(area)/3)  + " *__import__('pcg_gazebo').random.rand(3)",
                 name='cuboid',
                 mass="max(0.1, __import__('pcg_gazebo').random.rand())",
                 color='xkcd'
@@ -655,13 +731,13 @@ def add_assets(world_gen):
     world_gen.add_asset(
     tag='static_cylinder',
     description=dict(
-        type='cylinder',
-        args=dict(
-            length="2 * __import__('pcg_gazebo').random.rand()",
-            radius="2 * __import__('pcg_gazebo').random.rand()",
-            name='cylinder',
-            color='xkcd'
-        )
+            type='cylinder',
+            args=dict(
+                length= "2",
+                radius= str(math.sqrt(area)/4)  + " *__import__('pcg_gazebo').random.rand()",
+                name='cylinder',
+                color='xkcd'
+            )
         )
     )
     print('Asset is available for world generation(static_cylinder,static_box)=', 'static_cylinder' in world_gen.assets.tags , 'static_box' in world_gen.assets.tags)
@@ -672,7 +748,7 @@ def createSingleRoom():
         raise argparse.ArgumentError("room_args have two argument.")
     x_min = y_min = args.room_args[1]
     x_max = y_max = args.room_args[2]
-     
+
 
     # Generate the polygon from where the walls will be extruded
     wall_polygon = random_points_to_triangulation(n_points, x_min, x_max, y_min, y_max)
@@ -700,6 +776,16 @@ def createSingleRoom():
     # tag='ground_plane',
     # model=SimulationModel.from_gazebo_model('ground_plane'))
 
+    # walls_model_fs = extrude(
+    # polygon=wall_polygon,
+    # thickness=wall_thickness,
+    # height=wall_height,
+    # pose=[0, 0, wall_height / 2., 0, 0, 0],
+    # extrude_boundaries=True,
+    # color='xkcd')
+    # world_gen.world.add_model(
+    # tag=walls_model_fs.name,
+    # model=walls_model_fs)
     free_space_polygon = world_gen.world.get_free_space_polygon(
     ground_plane_models=[walls_model.name])
 
@@ -725,12 +811,13 @@ def createSingleRoom():
         )
     )
 
-
+    # world_gen.world.rm_model(walls_model_fs.name)
+    
     if(args.mesh) :
         NUM_BOXES = args.box
         NUM_CYLINDER = args.cylinder
         
-        add_assets(world_gen)
+        add_assets(world_gen, free_space_polygon.area)
 
         placement_policy = dict(
             models=['static_box', 'static_cylinder'],
@@ -771,6 +858,7 @@ def createSingleRoom():
 
         world_gen.run_engines(attach_models=True)
         
+        
     
     
     random_point_wall_sdf = create_sdf_element("sdf")
@@ -778,17 +866,22 @@ def createSingleRoom():
     # random_point_wall_model_ground = world_gen.world.get_model("ground_plane")
 
     # random_point_wall_sdf.add_model('ground_plane', random_point_wall_model_ground.to_sdf())
-    random_point_wall_sdf.add_model('walls'+str(lastWallSequenceInAsset()+1), random_point_wall_model_wall.to_sdf())
+    random_point_wall_sdf.add_model( 'walls' + str(lastWallSequenceInAsset() + 1 ), random_point_wall_model_wall.to_sdf())
 
     path = createGazeboAssetModelConfig()
     
     random_point_wall_sdf.export_xml(path +  "/model.sdf")
 
+    sub_model_wkb = free_space_polygon.wkb
+    sub_models_wkb_file = open(path + "wall.wkb", 'wb')
+    sub_models_wkb_file.write(sub_model_wkb)
 
     if args.mesh:
         sub_models_path = path + 'sub_models'
 
         sub_models = sorted(world_gen.world.models)
+
+       
         sub_models = removeIf(sub_models, 'walls')
         sub_models = removeIf(sub_models, 'ground_plane')
 
@@ -807,44 +900,143 @@ def createSingleRoom():
             sub_models_wkb_file.close()
         # add spawn_points of robot and bitmaps using submodels
 
-    wall_model = world_gen.world.models['walls']
-    wall_model_shapely = wall_model.get_footprint()['walls']
-    bounds = wall_model_shapely.bounds
+    # wall_model = world_gen.world.models['walls']
+    # wall_model_shapely = wall_model.get_footprint()['walls']
+    # bounds = wall_model_shapely.bounds
 
-    centroid = wall_model_shapely.centroid
+    # centroid = wall_model_shapely.centroid
+    
+    bounds = free_space_polygon.bounds
+    centroid = free_space_polygon.centroid
 
+    createBitmapRobotPositionFileS(world_gen, free_space_polygon, centroid, bounds, path)
 
-    createBitmapRobotPositionFileS(world_gen,wall_model_shapely,centroid,bounds,path)
-
-
+    world_gen.engines.reset()
     return random_point_wall_sdf
 
 
-
+def raise_(ex):
+    raise ex
 
 if __name__=="__main__":
     print(args)
-    if(args.choice == 'single_room'):
-        print("starting random map creation...")
-        createSingleRoom()
-    elif(args.choice == 'multi_room'):
-        print("starting random map creation...")
-        py_path = os.path.dirname(__file__)
-        
-        print(py_path+'/nav2_random_map_generator/src')
-        # os.chdir(py_path+'/nav2_random_map_generator/src')
-        p_image = subprocess.Popen("./" + RAND_MAP_CMD + " " + str(args.room_args[0])+" 0 0 5 512 512 0 0 0 0 0 0", cwd=py_path+"/nav2_random_map_generator/src", stdout=subprocess.PIPE, shell=True)
-        # p_image.wait()
-        out, err = p_image.communicate()
-        
-        print("\n".join(str(out).split('\\n')[0:3]))
-        
-        # p_image.wait()
+    try:
+        if(args.choice == 'single_room'):
+            print("starting random map creation...")
+            createSingleRoom()
+        elif(args.choice == 'multi_room'):
+            print("starting random map creation...")
+            py_path = os.path.dirname(__file__)
+            
+            print(py_path+'/nav2_random_map_generator/src')
+            # os.chdir(py_path+'/nav2_random_map_generator/src')
+            p_image = subprocess.Popen("./" + RAND_MAP_CMD + " " + str(args.room_args[0])+" 0 0 5 512 512 0 0 0 0 0 0", cwd=py_path+"/nav2_random_map_generator/src", stdout=subprocess.PIPE, shell=True)
+            # p_image.wait()
+            out, err = p_image.communicate()
+            
+            print("\n".join(str(out).split('\\n')[0:3]))
+            
+            # p_image.wait()
 
-        image = cv2.imread(py_path + '/nav2_random_map_generator/random_world/media/materials/texture/random_world.png')
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = cv2.imread(py_path + '/nav2_random_map_generator/random_world/media/materials/texture/random_world.png')
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        lines = detectHoughLines(image)
-        createMultiRoom(image, lines)
-    else:
-        print("There must be a choice.[single_room [N] ] or [multiple_room [N] ]")
+            lines = detectHoughLines(image)
+            createMultiRoom(image, lines)
+        elif(args.choice == 'all_room'):
+            # here is all_room creation logic
+            # [kaç tane multi harita oluşacağı] [hangi id den itibaren] [kaç tane single room olacağı] [single max room uzunluğu sayısı] [max nokta sayısı] [%meshli mi meshsiz mi olacağı] [multi_map_max_scale_factor][...]   
+            print("starting random maps creation...")
+            multi_room_count=args.room_args[0]
+            multi_id_min=args.room_args[1]
+            single_room_count=args.room_args[2]
+            single_room_lenght=args.room_args[3]
+            single_room_wall_point_max = args.room_args[4]
+            mesh_acc =  args.room_args[5]
+            multi_scale_factor = args.room_args[6] # 30
+            # args.debug = True
+            
+            for i in range(multi_id_min, multi_id_min+multi_room_count):
+                args.room_args[0] = i
+                args.scale_factor = random.randint(10,multi_scale_factor)
+                signal.signal(signal.SIGALRM, lambda signum, frame: raise_(Exception("timeout livelock occurs.")))
+                signal.alarm(350)
+                try:
+                    mesh_prob = random.random()
+                    if (mesh_prob < mesh_acc/100 ):
+                        args.mesh = True
+                        print("creating with mesh multi_room...")
+                        py_path = os.path.dirname(__file__)
+                        
+                        print(py_path+'/nav2_random_map_generator/src')
+                        # os.chdir(py_path+'/nav2_random_map_generator/src')
+                        p_image = subprocess.Popen("./" + RAND_MAP_CMD + " " + str(args.room_args[0])+" 0 0 5 512 512 0 0 0 0 0 0", cwd=py_path+"/nav2_random_map_generator/src", stdout=subprocess.PIPE, shell=True)
+                        # p_image.wait()
+                        out, err = p_image.communicate()
+                        
+                        print("\n".join(str(out).split('\\n')[0:3]))
+                        
+                        # p_image.wait()
+
+                        image = cv2.imread(py_path + '/nav2_random_map_generator/random_world/media/materials/texture/random_world.png')
+                        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+                        lines = detectHoughLines(image)
+                        createMultiRoom(image, lines)
+                    else:
+                        print("creating meshless map only wall multi_room...")
+                        py_path = os.path.dirname(__file__)
+                        
+                        print(py_path+'/nav2_random_map_generator/src')
+                        # os.chdir(py_path+'/nav2_random_map_generator/src')
+                        p_image = subprocess.Popen("./" + RAND_MAP_CMD + " " + str(args.room_args[0])+" 0 0 5 512 512 0 0 0 0 0 0", cwd=py_path+"/nav2_random_map_generator/src", stdout=subprocess.PIPE, shell=True)
+                        # p_image.wait()
+                        out, err = p_image.communicate()
+                        
+                        print("\n".join(str(out).split('\\n')[0:3]))
+                        
+                        # p_image.wait()
+
+                        image = cv2.imread(py_path + '/nav2_random_map_generator/random_world/media/materials/texture/random_world.png')
+                        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+                        lines = detectHoughLines(image)
+                        createMultiRoom(image, lines)
+                
+                except Exception as exc:
+                    print(exc)
+                    removeLastWall()
+                
+                signal.alarm(0)
+
+
+            for i in range(single_room_count):
+                signal.signal(signal.SIGALRM, lambda signum, frame: raise_(Exception("timeout livelock occurs.")))
+                signal.alarm(350)
+                try:
+                    args.room_args[2] = random.randint(5, single_room_lenght / 2)
+                    args.room_args[1] = -random.randint(5, single_room_lenght / 2)
+                    args.room_args[0] = random.randint(3, single_room_wall_point_max)
+                
+                    if (random.random() < mesh_acc / 100 ):
+                        args.mesh = True
+                        
+                        print("creating single_room map with mesh ")
+                        createSingleRoom()
+                    else:
+                        args.mesh = False
+                        
+                        print("creating single_room map with mesh ")
+                        createSingleRoom()
+
+                except Exception as exc:
+                    print(exc)
+                    removeLastWall()
+                signal.alarm(0)
+
+
+        else:
+            print("There must be a choice.[single_room [N] ] or [multiple_room [N] ] or [all_room] [N][N][N][N][N][N][N]]")
+
+    except KeyboardInterrupt:
+        removeLastWall()

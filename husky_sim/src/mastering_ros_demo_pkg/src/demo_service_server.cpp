@@ -78,6 +78,10 @@ public:
       std::string str = s.str();
       std::string folder_name = "wall";
       std::size_t found = str.find(folder_name);
+      std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+      a << found << ": " << str << " " << str.substr(found + folder_name.size()) << std::endl;
+      a.close();
+      std::cout << found << ": " << str << " " << str.substr(found + folder_name.size()) << std::endl;
 
       if (found != string::npos)
       {
@@ -253,7 +257,8 @@ private:
     std::string sensorDataPath = this->buildingEditorPath + "/wall" + std::to_string(this->wallSequenceId) + "/sensors";
     std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", ios::out | ios::in);
     a << sensorDataPath << " : " << this->defaultBagPath << std::endl;
-
+    a.close();
+    std::cout << sensorDataPath << " : " << this->defaultBagPath << std::endl;
     if (!boost::filesystem::exists(sensorDataPath))
     {
       boost::filesystem::create_directory(sensorDataPath);
@@ -285,17 +290,24 @@ private:
   void sync_callback(const sensor_msgs::LaserScan::ConstPtr& laserScanR,
                      const sensor_msgs::LaserScan::ConstPtr& laserScanF, const nav_msgs::Odometry::ConstPtr& odom)
   {
-    ROS_INFO("veriler bag olarak kaydediliyor.");
+    // ROS_INFO("veriler bag olarak kaydediliyor.");
 
     rosbag::Bag bagF(this->filenameFrontLaserBag, rosbag::bagmode::BagMode::Append);
-    bagF.write("/front/scan", ros::Time::now(), laserScanF);
-
     rosbag::Bag bagR(this->filenameRearLaserBag, rosbag::bagmode::BagMode::Append);
-    bagR.write("/rear/scan", ros::Time::now(), laserScanR);
-
-    std::cout << "burada kaydetme olacak" << std::endl;
     rosbag::Bag bagO(this->filenameOdomBag, rosbag::bagmode::BagMode::Append);
-    bagO.write("/odometry/filtered", ros::Time::now(), odom);
+    // std::cout << "burada kaydetme olacak" << std::endl;
+    try
+    {
+      bagF.write("/front/scan", ros::Time::now(), laserScanF);
+
+      bagR.write("/rear/scan", ros::Time::now(), laserScanR);
+
+      bagO.write("/odometry/filtered", ros::Time::now(), odom);
+    }
+    catch (rosbag::BagIOException&)
+    {
+      std::cout << "exception occured this sequence" << std::endl;
+    }
 
     bagF.close();
     bagO.close();
@@ -408,7 +420,7 @@ private:
     else if (req.in == "READY_TO_EXPLORE")
     {
       this->readyToExplore = true;
-      std::cout << "Not Implemented yet" << std::endl;
+      // std::cout << "Not Implemented yet" << std::endl;
       this->recordThread = std::thread([=] { this->recordData(); });
       this->recordThread.detach();
     }

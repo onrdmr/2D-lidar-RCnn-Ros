@@ -23,6 +23,8 @@
 
 #include <gazebo/gazebo.hh>
 #include <ignition/math.hh>
+#include <ignition/math/Box.hh>
+
 #include <gazebo/physics/physics.hh>
 // #include <gazebo/msgs/msgs.hh>
 
@@ -54,8 +56,6 @@
 #include <boost/algorithm/string.hpp>
 
 #define PI 3.14159265359
-#define ROBOT_SIZE 0.55  // 0.7
-#define ROBOT_WING 0.4
 
 namespace fs = std::filesystem;
 
@@ -97,6 +97,9 @@ public:
   RobotHello() : ModelPlugin()
   {
     srand((unsigned)time(NULL));
+
+    ROBOT_SIZE = 0.55;  // 0.7
+    ROBOT_WING = 0.4;
 
     /* Send notice and error messages to our stdout handler */
     /* Done */
@@ -144,30 +147,31 @@ public:
     centroid.yaw = yaw;
     const std::string& robotWKT = PolyrotateUsingYaw(point1, point2, point3, point4, centroid);
 
-    std::cout << robotWKT << std::endl;
+    // std::cout << robotWKT << std::endl;
     unsigned char buffer_b[300000];
 
     GEOSWKTReader* readerWKT = GEOSWKTReader_create();
     GEOSGeometry* geom_a = GEOSWKTReader_read(readerWKT, robotWKT.c_str());
-    std::cout << "multi room intersection check gireceğim " << std::endl;
+    // std::cout << "multi room intersection check gireceğim " << std::endl;
     if (this->mapType == "multi-room")
     {
-      std::cout << "mmap folder path "
-                << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/mmap" << std::endl;
+      // std::cout << "mmap folder path "
+      //           << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/mmap" <<
+      //           std::endl;
       for (const auto& entry : fs::directory_iterator(this->buildingEditorPath + "/wall" +
                                                       std::to_string(this->modelWallSequence) + "/mmap"))
       {
         GEOSWKBReader* reader = GEOSWKBReader_create();
         GEOSWKTWriter* writer = GEOSWKTWriter_create();
-        std::cout << "duvar " << entry << " ve robot arasında kesişim aranıyor." << std::endl;
+        // std::cout << "duvar " << entry << " ve robot arasında kesişim aranıyor." << std::endl;
 
         std::stringstream meshWKBSS;
         meshWKBSS << entry;
         std::string meshWKBPath = meshWKBSS.str().substr(1, meshWKBSS.str().size() - 2);
-        std::cout << "meshWKBPath : " << meshWKBPath << std::endl;
+        // std::cout << "meshWKBPath : " << meshWKBPath << std::endl;
         FILE* filp_b = fopen(meshWKBPath.c_str(), "rb");
         int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
-        printf("buffer 2 : %d bytes \n", bytes_read_b);
+        // printf("buffer 2 : %d bytes \n", bytes_read_b);
         fclose(filp_b);
         //   unsigned char* a;
         //   a = (unsigned char*)wkb_b;
@@ -185,8 +189,8 @@ public:
         char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
         /* Print answer */
-        printf("Intersection(A, B): %s\n", wkt_inter);
-        printf("WallPolygon(A, B): %s\n", wall_geom);
+        // printf("Intersection(A, B): %s\n", wkt_inter);
+        // printf("WallPolygon(A, B): %s\n", wall_geom);
 
         char* output = NULL;
         output = strstr(wkt_inter, "EMPTY");
@@ -244,23 +248,23 @@ public:
         std::stringstream sstream;
         sstream << stream.rdbuf();
         std::string bitmap = sstream.str();
-        std::cout << "bitmap " << bitmap << std::endl;
+        // std::cout << "bitmap " << bitmap << std::endl;
         std::vector<std::string> token;
         boost::split(token, bitmap, boost::is_any_of(" "));
 
         int i = 0;
         for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
         {
-          std::cout << "stoi" << token[i] << " " << this->bitmapId << std::endl;
+          // std::cout << "stoi" << token[i] << " " << this->bitmapId << std::endl;
           if (std::stoi(token[i]) == true)
           {
             GEOSWKBReader* reader = GEOSWKBReader_create();
             GEOSWKTWriter* writer = GEOSWKTWriter_create();
-            std::cout << "duvar " << itr->second << " ve robot arasında kesişim aranıyor." << std::endl;
+            // std::cout << "duvar " << itr->second << " ve robot arasında kesişim aranıyor." << std::endl;
 
             FILE* filp_b = fopen(itr->second.c_str(), "rb");
             int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
-            printf("buffer 2 : %d bytes \n", bytes_read_b);
+            // printf("buffer 2 : %d bytes \n", bytes_read_b);
             fclose(filp_b);
             //   unsigned char* a;
             //   a = (unsigned char*)wkb_b;
@@ -278,8 +282,8 @@ public:
             char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
             /* Print answer */
-            printf("Intersection(A, B): %s\n", wkt_inter);
-            printf("WallPolygon(A, B): %s\n", wall_geom);
+            // printf("Intersection(A, B): %s\n", wkt_inter);
+            // printf("WallPolygon(A, B): %s\n", wall_geom);
 
             char* output = NULL;
             output = strstr(wkt_inter, "EMPTY");
@@ -315,7 +319,163 @@ public:
 
     else if (this->mapType == "single-room")
     {
-      return false;
+      std::cout << "single-room folder path "
+                << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/" << std::endl;
+
+      std::string entry = this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/wall.wkb";
+
+      GEOSWKBReader* reader = GEOSWKBReader_create();
+      GEOSWKTWriter* writer = GEOSWKTWriter_create();
+      std::cout << "duvar " << entry << " ve robot arasında kesişim aranıyor." << std::endl;
+
+      std::string meshWKBPath = entry;
+      // std::cout << "meshWKBPath : " << meshWKBPath << std::endl;
+      FILE* filp_b = fopen(meshWKBPath.c_str(), "rb");
+      int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
+      // printf("buffer 2 : %d bytes \n", bytes_read_b);
+      fclose(filp_b);
+      //   unsigned char* a;
+      //   a = (unsigned char*)wkb_b;
+      //   /* Read the WKT into geometry objects */
+
+      GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
+      /* Calculate the intersection */
+      GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
+
+      /* Convert result to WKT */
+
+      /* Trim trailing zeros off output */
+      GEOSWKTWriter_setTrim(writer, 1);
+      char* wkt_inter = GEOSWKTWriter_write(writer, inter);
+      char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
+
+      /* Print answer */
+      // printf("Intersection(A, B): %s\n", wkt_inter);
+      // printf("WallPolygon(A, B): %s\n", wall_geom);
+
+      char* output = NULL;
+      output = strstr(wkt_inter, "EMPTY");
+
+      if (output == NULL)
+      {
+        intersection = true;
+        GEOSWKBReader_destroy(reader);
+        GEOSWKTWriter_destroy(writer);
+        GEOSGeom_destroy(geom_b);
+        GEOSGeom_destroy(inter);
+        GEOSFree(wkt_inter);
+        GEOSWKTReader_destroy(readerWKT);
+        GEOSGeom_destroy(geom_a);
+        return intersection;
+      }
+      GEOSWKBReader_destroy(reader);
+      GEOSWKTWriter_destroy(writer);
+      GEOSGeom_destroy(geom_b);
+      GEOSGeom_destroy(inter);
+      GEOSFree(wkt_inter);
+
+      GEOSWKTReader_destroy(readerWKT);
+      GEOSGeom_destroy(geom_a);
+      /* Clean up everything we allocated */
+
+      if (this->bitmapId != -1)
+      {
+        std::map<std::string, fs::path> modelSet;
+
+        for (const auto& entry : fs::directory_iterator(this->buildingEditorPath + "/wall" +
+                                                        std::to_string(this->modelWallSequence) + "/sub_models/"))
+        {
+          // std::cout << entry << std::endl;
+          std::stringstream s;
+          s << entry;
+          std::string key = s.str();
+          key.erase(key.begin());
+          key.erase(key.end() - 1);
+          // std::cout << key << std::endl;
+          if (boost::algorithm::ends_with(key, ".wkb"))
+          {
+            std::vector<std::string> result;
+            boost::split(result, key, boost::is_any_of("/"));
+            std::string modelName = result[result.size() - 1].substr(0, result[result.size() - 1].size() - 4);
+
+            // std::cout << " modelName : " << modelName << " key: " << key << std::endl;
+            // std::cout << str.at(sequenceWall) << std::endl;
+            modelSet.insert({ modelName, key });
+          }
+        }
+        // bitmap
+        std::ifstream stream(this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/bitmap_" +
+                             std::to_string(this->bitmapId));
+        std::stringstream sstream;
+        sstream << stream.rdbuf();
+        std::string bitmap = sstream.str();
+        // std::cout << "bitmap " << bitmap << std::endl;
+        std::vector<std::string> token;
+        boost::split(token, bitmap, boost::is_any_of(" "));
+
+        int i = 0;
+        for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
+        {
+          // std::cout << "stoi" << token[i] << " " << this->bitmapId << std::endl;
+          if (std::stoi(token[i]) == true)
+          {
+            GEOSWKBReader* reader = GEOSWKBReader_create();
+            GEOSWKTWriter* writer = GEOSWKTWriter_create();
+            // std::cout << "duvar " << itr->second << " ve robot arasında kesişim aranıyor." << std::endl;
+
+            FILE* filp_b = fopen(itr->second.c_str(), "rb");
+            int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
+            // printf("buffer 2 : %d bytes \n", bytes_read_b);
+            fclose(filp_b);
+            //   unsigned char* a;
+            //   a = (unsigned char*)wkb_b;
+            //   /* Read the WKT into geometry objects */
+
+            GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
+            /* Calculate the intersection */
+            GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
+
+            /* Convert result to WKT */
+
+            /* Trim trailing zeros off output */
+            GEOSWKTWriter_setTrim(writer, 1);
+            char* wkt_inter = GEOSWKTWriter_write(writer, inter);
+            char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
+
+            /* Print answer */
+            // printf("Intersection(A, B): %s\n", wkt_inter);
+            // printf("WallPolygon(A, B): %s\n", wall_geom);
+
+            char* output = NULL;
+            output = strstr(wkt_inter, "EMPTY");
+
+            if (output == NULL)
+            {
+              intersection = true;
+              GEOSWKBReader_destroy(reader);
+              GEOSWKTWriter_destroy(writer);
+              GEOSGeom_destroy(geom_b);
+              GEOSGeom_destroy(inter);
+              GEOSFree(wkt_inter);
+              GEOSWKTReader_destroy(readerWKT);
+              GEOSGeom_destroy(geom_a);
+              return intersection;
+            }
+            GEOSWKBReader_destroy(reader);
+            GEOSWKTWriter_destroy(writer);
+            GEOSGeom_destroy(geom_b);
+            GEOSGeom_destroy(inter);
+            GEOSFree(wkt_inter);
+          }
+          else
+          {
+            continue;
+          }
+          GEOSWKTReader_destroy(readerWKT);
+          GEOSGeom_destroy(geom_a);
+          /* Clean up everything we allocated */
+        }
+      }
     }
     else
     {
@@ -357,6 +517,16 @@ public:
         new gazebo::common::PoseAnimation("test", simTimePerIter, false));
     this->anim = anim;
 
+    ignition::math::AxisAlignedBox rBox = _parent->CollisionBoundingBox();
+
+    ROBOT_SIZE = rBox.XLength() + 0.1;  // 0.7
+    ROBOT_WING = (rBox.YLength() + 0.1) / 2;
+
+    std::cout << "robot size : " << rBox.XLength() << " " << rBox.YLength() << std::endl;
+    std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+    a << "robot size : " << rBox.XLength() << " " << rBox.YLength() << std::endl;
+    a.close();
+    // exit();
     // explorationLogic(anim);
     // this->model->SetAnimation(anim);
     // const physics::WorldPtr worldPtr = _parent->GetWorld();
@@ -377,9 +547,16 @@ public:
 
     int sampleFactor = 2;
     int sample = simTimePerIter * sampleFactor;
+    if (IntersectionCheck(position.x, position.y, position.yaw))
+    {
+      std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+      a << "ilk durumda kesişim var map_creator_script hatalı" << std::endl;
+      std::cout << "ilk durumda kesişim var map_creator_script hatalı" << std::endl;
+      a.close();
+    }
     for (int i = 1; i <= sample; i++)
     {
-      std::cout << "Örnek " << i << " deneniyor." << std::endl;
+      // std::cout << "Örnek " << i << " deneniyor." << std::endl;
       PositionDerivatives derivatives = createRandomDerivative();
       double x = position.x + derivatives.dx;
       double y = position.y + derivatives.dy;
@@ -388,12 +565,12 @@ public:
 
       if (IntersectionCheck(x, y, yaw))
       {
-        std::cout << i << " ci örnekte kesişim bulundu. " << std::endl;
+        // std::cout << i << " ci örnekte kesişim bulundu. " << std::endl;
         i--;
         continue;
       }
       const double keyFrame = i / static_cast<double>(sample) * simTimePerIter;
-      std::cout << "Örnek " << i << " keyframe" << keyFrame << std::endl;
+      // std::cout << "Örnek " << i << " keyframe" << keyFrame << std::endl;
       key = anim->CreateKeyFrame(keyFrame);
 
       position.x = x;
@@ -433,7 +610,13 @@ public:
     // position.yaw = -2.385220960471571d;
 
     robotPosFile >> position.x >> position.y >> position.yaw;
-
+    std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+    a << "robot position " << robotPositionPath << " " << position.x << " " << position.y << " " << position.yaw
+      << std::endl;
+    a.close();
+    // std::cout << "robot position " << robotPositionPath << " " << position.x << " " << position.y << " " <<
+    // position.yaw
+    //           << std::endl;
     std::cout << std::setprecision(15) << position.x << " " << position.y << " " << position.yaw << std::endl;
     this->robotPositionSequence++;
   }
@@ -508,13 +691,13 @@ private:
     double s = sin(position.yaw);
     double c = cos(position.yaw);
 
-    std::cout << position.yaw << std::endl;
+    // std::cout <<"yaw " << position.yaw << std::endl;
 
-    std::cout << "Önceki ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
-                     std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " +
-                     std::to_string(point3.y) + ", " + std::to_string(point4.x) + " " + std::to_string(point4.y) + "," +
-                     std::to_string(point1.x) + " " + std::to_string(point1.y) + "))"
-              << std::endl;
+    // std::cout << "Önceki ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
+    //                  std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + "
+    //                  " + std::to_string(point3.y) + ", " + std::to_string(point4.x) + " " + std::to_string(point4.y)
+    //                  + "," + std::to_string(point1.x) + " " + std::to_string(point1.y) + "))"
+    //           << std::endl;
 
     point1.x -= position.x;
     point1.y -= position.y;
@@ -546,11 +729,11 @@ private:
 
     // std::ofstream deneme("deneme");
     // robot polygon hatalı
-    std::cout << "sonraki ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
-                     std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " +
-                     std::to_string(point3.y) + ", " + std::to_string(point4.x) + " " + std::to_string(point4.y) + "," +
-                     std::to_string(point1.x) + " " + std::to_string(point1.y) + "))"
-              << std::endl;
+    // std::cout << "sonraki ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
+    //                  std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + "
+    //                  " + std::to_string(point3.y) + ", " + std::to_string(point4.x) + " " + std::to_string(point4.y)
+    //                  + "," + std::to_string(point1.x) + " " + std::to_string(point1.y) + "))"
+    //           << std::endl;
 
     return "POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " + std::to_string(point2.x) +
            " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " + std::to_string(point3.y) + ", " +
@@ -572,6 +755,8 @@ private:
   int robotPositionSequence;
   // Pointer to the update event connection
   event::ConnectionPtr updateConnection;
+  double ROBOT_SIZE;  // 0.7
+  double ROBOT_WING;
 };  // namespace gazebo
 GZ_REGISTER_MODEL_PLUGIN(RobotHello)
 }  // namespace gazebo
