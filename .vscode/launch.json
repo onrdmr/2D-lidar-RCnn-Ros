@@ -10,10 +10,10 @@
    "request": "launch",
    "program": "${file}",
    "console": "integratedTerminal",
-   "args": ["single_room","6", "-10", "10", "--mesh", "--debug"],
-   // "args": ["multi_room","1"],
-   //# [kaç tane multi harita oluşacağı] [hangi id den itibaren] [kaç tane single room olacağı] [single max room uzunluğu sayısı] [max nokta sayısı] [%meshli mi meshsiz mi olacağı] [multi_map scale facror] [...]
-   "args" : ["all_room", "20", "1", "8", "5", "35", "30" , "30", "--debug"]
+   // "args": ["single_room","6", "-10", "10", "--mesh", "--debug"],
+   // "args": ["multi_room","3", "--mesh"],
+   //# [kaç tane multi harita oluşacağı] [hangi id den itibaren] [kaç tane single room olacağı] [single max room uzunluğu sayısı] [max nokta sayısı] [%meshli mi meshsiz mi olacağı] [max multi_map scale facror] [...]
+   "args" : ["all_room", "20", "1", "10", "20", "10", "75" , "30"]
 
   }
  ]

@@ -73,5 +73,6 @@
         "shared_mutex": "cpp",
         "cfenv": "cpp",
         "valarray": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "${workspaceFolder}/husky_sim/build/catkin_generated/metapackages/husky_desktop"
 }

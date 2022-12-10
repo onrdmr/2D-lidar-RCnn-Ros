@@ -38,7 +38,7 @@ WALL_HEIGHT = 2
 HUSKY_SIZE_X = 1.2#0.98740000
 HUSKY_SIZE_Y = 0.7#0.57090000
 
-stat_sign_factor = 1.645
+stat_sign_factor = 1.5#1.645
 
 RAND_MAP_CMD = "random-map"
 
@@ -50,7 +50,8 @@ parser = argparse.ArgumentParser(description='Process some integers.')
 #                     help='sum the integers (default: find the max)')
 
 
-# lastWallSequence = None # static variable of lastWallSequence function
+lastWallSequence = None # static variable of lastWallSequence function
+world_gen = None
 
 parser.add_argument('--spawn-count', '-r', '--robot-count', type=int ,default=5)
 parser.add_argument('--scale-factor', '-s', type=float, default=10.0) # it must be greater than 10 otherwise robot can not move other rooms
@@ -195,6 +196,9 @@ class HoughBundler:
 
 
 
+def raise_(ex):
+    raise ex
+
 
 def readImage(filename):
     image = cv2.imread(filename)
@@ -242,22 +246,22 @@ def removeLastWall():
     os.system("rm -rf " + list_dir[-1])
 
 def lastWallSequenceInAsset():
-    # global lastWallSequence
-    # if lastWallSequence == None: 
-    list_dir = listdir(args.asset_dir)
-    if(len(list_dir) == 0) :
-        lastWallSequence = 0
-        return 0
-    
-    list_dir = [os.path.join(args.asset_dir, f) for f in list_dir]
-    list_dir.sort(key=lambda x: os.path.getmtime(x))
-    number = "".join([i for i in list_dir[-1] if i.isdigit() and int(i) < 10 and int(i) > -1 ])
-    
-    if(number==""):
-        lastWallSequence = 0
-        return 0
-    
-    lastWallSequence = int(number) 
+    global lastWallSequence
+    if lastWallSequence == None: 
+        list_dir = listdir(args.asset_dir)
+        if(len(list_dir) == 0) :
+            lastWallSequence = 0
+            return 0
+        
+        list_dir = [os.path.join(args.asset_dir, f) for f in list_dir]
+        list_dir.sort(key=lambda x: os.path.getmtime(x))
+        number = "".join([i for i in list_dir[-1] if i.isdigit() and int(i) < 10 and int(i) > -1 ])
+        
+        if(number==""):
+            lastWallSequence = 0
+            return 0
+        
+        lastWallSequence = int(number) 
     return lastWallSequence
 
 def createGazeboAssetModelConfig():
@@ -330,24 +334,51 @@ def addRandomMeshesFromDB(engine, wall_sdf):
     raise NotImplementedError("asset store is not ready to production :: https://stackoverflow.com/questions/50731785/create-random-shape-contour-using-matplotlib")
 
 def createFactoryEngine():
-    world_gen = WorldGenerator()
-    world_gen.init()
-    world_gen.engines.reset()
+    # singleton
+    global world_gen
+    if(world_gen == None): 
+        world_gen = WorldGenerator()
+        world_gen.init()
+    # else:
+        # world_gen.engines.reset()
     return world_gen
 
 
 def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bounds, path, wall_name):
 
-    if(world_gen == None): 
+    if(world_gen == None or world_gen.world.models.__len__()==0):
+
+        if args.debug:
+            world_gen = createFactoryEngine()
         for i in range(args.spawn_count):
             polygon, robot_pos_yaw = createRandomRobotPolygonInMap(centroid, bounds)
-            while(checkMultiRoomIntersection( lines, scale_factor, polygon)):
+            while(checkMultiRoomIntersection( lines, scale_factor, polygon )):
                 polygon, robot_pos_yaw = createRandomRobotPolygonInMap(centroid, bounds)
 
 
             robot_file=open(path + '/robot_position_'+str(i), 'w')
             robot_file.write(" ".join(map(str,robot_pos_yaw)))
             robot_file.close()
+
+            if args.debug:
+                path = args.asset_dir
+
+                last_wall_seq = lastWallSequenceInAsset()
+                text = args.wall_name + (str(int(last_wall_seq)+1) if last_wall_seq != None else "1")
+                path = path+ text + "/"
+            
+
+                from pcg_gazebo.parsers import parse_sdf
+                wall_sdf_ = parse_sdf(path+"model.sdf")
+                walls_model=ModelGroup.from_sdf(wall_sdf_)
+                world_gen.world.add_model(tag="wall", model=walls_model)
+                robot_l = box_factory([HUSKY_SIZE_X, HUSKY_SIZE_Y, HUSKY_SIZE_Y],pose=(robot_pos_yaw[0], robot_pos_yaw[1], 0 ,0 ,0, robot_pos_yaw[2] ), color="xkcd")
+                robot=robot_l[0]
+                world_gen.world.add_model(tag="robot", model=robot)
+                world_gen.world.create_scene().show()
+                world_gen.world.rm_model("robot")
+                world_gen.world.rm_model("wall")            
+
 
         return
 
@@ -464,10 +495,11 @@ def createWallPolygonMultiRoom(lines, scale_factor, path):
         #     )
         # )
         lineP = LineString([Point(line[0]* scale_factor, line[1] * scale_factor), Point(line[2] * scale_factor, line[3] * scale_factor)])
-        lineP = lineP.buffer(WALL_THICKNESS+0.1)
+        lineP = lineP.buffer(WALL_THICKNESS)
         lineFile = open(mmap_model_folder_path + '/line_'+str(j), 'wb')
         lineFile.write(lineP.wkb)
         lineFile.close()
+    return
 
 def checkMultiRoomIntersection(lines, scale_factor, polygon):
 
@@ -503,6 +535,8 @@ def checkMultiRoomIntersection(lines, scale_factor, polygon):
     return False
 
 def createMultiRoom(image, lines):
+    global world_gen
+    
     min_len_map=min(image.shape[0:1])
     scale_factor = 1/(min_len_map/args.scale_factor)
 
@@ -531,7 +565,10 @@ def createMultiRoom(image, lines):
 
     
 
+    print ("wall complexity =" + str(len(lines)))
     path = createGazeboAssetModelConfig()
+    if len(lines) > 35:
+        signal.raise_signal(signal.SIGALRM)
 
     last_wall_seq = lastWallSequenceInAsset()
     walls_model_name = "walls" + (str(int(last_wall_seq)+1) if last_wall_seq != None else "1")
@@ -541,7 +578,7 @@ def createMultiRoom(image, lines):
     walls_model=ModelGroup.from_sdf(wall_sdf_)
 
     
-    world_gen = None
+    # world_gen = None
     
     if args.mesh:
         world_gen = createFactoryEngine()
@@ -595,7 +632,7 @@ def createMultiRoom(image, lines):
                 ),
                 dict(
                     dofs=['yaw'],
-                    tag='uniform',         
+                    tag='uniform',
                     min=-3.141592653589793,
                     max=3.141592653589793
                 )
@@ -622,6 +659,7 @@ def createMultiRoom(image, lines):
             ]
         )
 
+        signal.alarm(200)
         world_gen.run_engines(attach_models=True)
 
     
@@ -661,7 +699,7 @@ def createMultiRoom(image, lines):
             sub_models_file.close()
             sub_models_wkb_file.close()
         # add spawn_points of robot and bitmaps using submodels
-        world_gen.engines.reset()
+        # world_gen.engines.reset_engines()
 
     createBitmapRobotPositionFileM(world_gen, lines, scale_factor, centroid, bounds, path,walls_model_name)
 
@@ -673,7 +711,6 @@ def removeIf(list, value):
     if list.count(value) > 0 : 
         list.remove(value)
     return list
-
 
 
 def createRandomRobotPolygonInMap(centroid, bounds):
@@ -702,6 +739,13 @@ def createRandomRobotPolygonInMap(centroid, bounds):
     (rand_x + dist_bound_x, rand_y-dist_bound_y) ) 
     polygon = Polygon(coord)
 
+    # world_gen.world.add_model("robot", polygon)
+    # world_gen.world.create_scene().show()
+
+    # robot_l = box_factory([HUSKY_SIZE_X, HUSKY_SIZE_Y, HUSKY_SIZE_Y],pose=(rand_x, rand_y, 0 ,0 ,0, rand_yaw ), color="xkcd")
+    
+    # polygon=robot_l[0]
+    
     # Rotate 30 degrees CCW from origin at the center of bbox
     polygon = affinity.rotate(polygon, np.rad2deg(rand_yaw), 'center')
 
@@ -721,7 +765,7 @@ def add_assets(world_gen, area):
         description=dict(
             type='box',
             args=dict(
-                size= str(math.sqrt(area)/3)  + " *__import__('pcg_gazebo').random.rand(3)",
+                size= str(math.sqrt(area)/5)  + " *__import__('pcg_gazebo').random.rand(3)",
                 name='cuboid',
                 mass="max(0.1, __import__('pcg_gazebo').random.rand())",
                 color='xkcd'
@@ -734,7 +778,7 @@ def add_assets(world_gen, area):
             type='cylinder',
             args=dict(
                 length= "2",
-                radius= str(math.sqrt(area)/4)  + " *__import__('pcg_gazebo').random.rand()",
+                radius= str(math.sqrt(area)/8)  + " *__import__('pcg_gazebo').random.rand()",
                 name='cylinder',
                 color='xkcd'
             )
@@ -743,6 +787,7 @@ def add_assets(world_gen, area):
     print('Asset is available for world generation(static_cylinder,static_box)=', 'static_cylinder' in world_gen.assets.tags , 'static_box' in world_gen.assets.tags)
 
 def createSingleRoom():
+    global world_gen
     n_points = args.room_args[0]
     if len(args.room_args) != SINGLE_ROOM_ARG_COUNT:
         raise argparse.ArgumentError("room_args have two argument.")
@@ -911,15 +956,30 @@ def createSingleRoom():
 
     createBitmapRobotPositionFileS(world_gen, free_space_polygon, centroid, bounds, path)
 
-    world_gen.engines.reset()
+    # world_gen.engines.reset_engines()
     return random_point_wall_sdf
 
 
-def raise_(ex):
-    raise ex
+def resetProgram():
+    global lastWallSequence, world_gen
+    signal.alarm(0)
+    lastWallSequence = None
+    args.mesh = False
+    if( world_gen != None):
+        world_gen.engines.reset()
+        world_gen.constraints.reset()
+        world_gen.assets.reset()
+        world_gen.engines.reset_engines()
+        world_gen.world.reset_models()
+        
+        # world_gen.assets.remove("static_cylinder")
+        # world_gen.assets.remove("static_box")
+
+
 
 if __name__=="__main__":
     print(args)
+    signal.signal(signal.SIGALRM, lambda signum, frame: raise_(Exception("complex wall exception")))
     try:
         if(args.choice == 'single_room'):
             print("starting random map creation...")
@@ -959,8 +1019,8 @@ if __name__=="__main__":
             for i in range(multi_id_min, multi_id_min+multi_room_count):
                 args.room_args[0] = i
                 args.scale_factor = random.randint(10,multi_scale_factor)
-                signal.signal(signal.SIGALRM, lambda signum, frame: raise_(Exception("timeout livelock occurs.")))
-                signal.alarm(350)
+                signal.signal(signal.SIGALRM, lambda signum, frame: raise_(Exception("timeout livelock occurs." + str(signum) + " " + str(frame))))
+                signal.alarm(200)
                 try:
                     mesh_prob = random.random()
                     if (mesh_prob < mesh_acc/100 ):
@@ -1007,11 +1067,11 @@ if __name__=="__main__":
                     print(exc)
                     removeLastWall()
                 
-                signal.alarm(0)
+                resetProgram()
 
 
             for i in range(single_room_count):
-                signal.signal(signal.SIGALRM, lambda signum, frame: raise_(Exception("timeout livelock occurs.")))
+
                 signal.alarm(350)
                 try:
                     args.room_args[2] = random.randint(5, single_room_lenght / 2)
@@ -1032,11 +1092,14 @@ if __name__=="__main__":
                 except Exception as exc:
                     print(exc)
                     removeLastWall()
-                signal.alarm(0)
-
+                
+                resetProgram()
+                
+                
 
         else:
             print("There must be a choice.[single_room [N] ] or [multiple_room [N] ] or [all_room] [N][N][N][N][N][N][N]]")
 
     except KeyboardInterrupt:
+        print("keyboard exception")
         removeLastWall()
