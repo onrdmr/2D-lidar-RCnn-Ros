@@ -408,6 +408,7 @@ def createBitmapRobotPositionFileM(world_gen,lines,scale_factor, centroid, bound
             intersects=polygon.intersects(sub_model)
             if intersects==True:
                 bitmap.append(0)
+                continue
             bitmap.append(1)
 
         bitmap_file=open(path + '/bitmap_'+str(i), 'w')
@@ -447,9 +448,9 @@ def createBitmapRobotPositionFileS(world_gen, wall_model_shapely, centroid, boun
                 sub_model = world_gen.world.models[model].get_footprint()[model]
                 intersects=polygon.intersects(sub_model)
                 if intersects==True:
-                    bitmap.append(1)
+                    bitmap.append(0)
                     continue
-                bitmap.append(0)
+                bitmap.append(1)
 
             bitmap_file=open(path + '/bitmap_'+str(i), 'w')
             bitmap_file.write(" ".join(map(str,bitmap)))
