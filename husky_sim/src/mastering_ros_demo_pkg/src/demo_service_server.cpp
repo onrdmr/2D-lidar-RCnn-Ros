@@ -156,7 +156,7 @@ private:
     bool singleRoom = true;
     std::cout << "setting message " << this->dbItr->second << std::endl;
     this->totalRobotPosition = 0;
-        this->totalSubModel = 0;
+    this->totalSubModel = 0;
     for (const auto& entry : fs::directory_iterator(this->dbItr->second))
     {
       std::cout << entry << std::endl;
@@ -248,7 +248,7 @@ private:
         // assign new positon or new map if all position are loaded
         // print qui way of how much map is printed in memory
       }
-      setNewExplorationStates();
+      // setNewExplorationStates();
     }
   }
 
@@ -402,7 +402,7 @@ private:
   bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
                              mastering_ros_demo_pkg::demo_srv::Response& res)
   {
-    if (req.in == "SEND_REQ")
+    if (req.in == "SET_MAP")
     {
       std::cout << "send req içindeyim " << std::endl;
       std::stringstream ss;
@@ -412,7 +412,7 @@ private:
       res.bitmapId = this->bitmapId;
       res.mapType = this->mapType;
       res.buildingEditorPath = this->buildingEditorPath;
-      res.out = "NOT_REMOVED";
+      res.out = "SET_MAP";
       this->readyToExplore = false;
       ROS_INFO("IN:SERVER || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", req.in.c_str(), res.wallSequence,
                res.robotPositionId, res.bitmapId, res.mapType.c_str(), res.buildingEditorPath.c_str());
@@ -424,20 +424,26 @@ private:
       this->recordThread = std::thread([=] { this->recordData(); });
       this->recordThread.detach();
     }
-    else if (req.in == "EXPLORE")
-    {
-    }
+    // else if (req.in == "EXPLORE")
+    // {
+    // }
 
-    else if (req.in == "REMOVE_MODELS")
+    else if (req.in == "REMOVE_RESET")
     {
-      ros::NodeHandle n;
-      ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
-      std_srvs::Empty srv;
-      res.out = "REMOVED";
-      if (resetGazebo.call(srv))
-      {
-        ROS_INFO("Resettig Gazebo World with REMOVED MODELS");
-      }
+      auto thread = std::thread([=] {
+        ros::NodeHandle n;
+        ros::Duration(0.5).sleep();
+
+        ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
+        std_srvs::Empty srv;
+        // res.out = "SET_MAP";
+        if (resetGazebo.call(srv))
+        {
+          ROS_INFO("Resetting Gazebo World with REMOVED MODELS");
+        }
+        setNewExplorationStates();
+      });
+      thread.detach();
     }
     return true;
   }
@@ -460,15 +466,21 @@ private:
               << " totalWallSequence :" << this->totalWallSequence << " totalSubModel :" << this->totalSubModel
               << " bitmapId" << this->bitmapId << std::endl;
   }
+
+  int findBitmapId()
+  {
+    std::string bitmapExists =
+        this->buildingEditorPath + "/wall" + std::to_string(this->wallSequenceId) + "/sub_models";
+    return (boost::filesystem::exists(bitmapExists)) ? this->bitmapId : -1;
+  }
+
   void setNewExplorationStates()
   {
-    std::cout << "setNewExploration State" << std::endl;
-    if (this->wallSequenceId == this->totalWallSequence)
-    {
-      std::cout << "program sonlandı yeni veri girdi kuyruğu beklenmekte" << std::endl;
-      std::cout << "girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek." << std::endl;
-      return;
-    }
+    ROS_INFO("setNewExploration State this->bitmapId:[%d] this->totalRobotPosition:[%d]", this->bitmapId,
+             this->totalRobotPosition);
+
+    this->bitmapId = findBitmapId();
+
     if (this->bitmapId == -1)
     {
       if (this->robotPositionId < this->totalRobotPosition)
@@ -480,6 +492,12 @@ private:
       {
         std::cout << "state exploration." << std::endl;
         this->wallSequenceId++;
+        if (this->wallSequenceId == this->totalWallSequence + 1)
+        {
+          std::cout << "program sonlandı yeni veri girdi kuyruğu beklenmekte" << std::endl;
+          std::cout << "girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek." << std::endl;
+          return;
+        }
         this->robotPositionId = 0;
 
         this->dbItr++;
@@ -500,6 +518,14 @@ private:
       {
         std::cout << "state exploration." << std::endl;
         this->wallSequenceId++;
+
+        if (this->wallSequenceId == this->totalWallSequence + 1)
+        {
+          std::cout << "program sonlandı yeni veri girdi kuyruğu beklenmekte" << std::endl;
+          std::cout << "girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek." << std::endl;
+          return;
+        }
+
         this->robotPositionId = 0;
 
         this->dbItr++;

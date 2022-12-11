@@ -36,11 +36,31 @@ public:
     std::cout << "Factory World Plugin Loaded : World " << _parent->Name() << std::endl;
     this->worldPtr = _parent;
     this->sdf = _sdf;
-
+    this->request = "SET_MAP";
     // Option 3: Insert model from file via message passing.
     // insertModelViaMP(_parent);
 
     // worldPtr->StartTime();
+  }
+
+  void RemoveModels()
+  {
+    physics::Model_V models = worldPtr->Models();  // modelptr vector
+
+    bool pauseState = worldPtr->IsPaused();
+    worldPtr->SetPaused(true);
+
+    for (physics::ModelPtr model : models)
+    {
+      std::string modelName = model->GetName();
+      if (modelName != "ground_plane" && modelName != "husky")
+      {
+        worldPtr->RemoveModel(model);
+      }
+    }
+    models.clear();
+
+    worldPtr->SetPaused(pauseState);
   }
 
   void insertWall()
@@ -130,8 +150,6 @@ public:
 
   void Reset()
   {
-    // worldPtr->ResetTime();
-    worldPtr->SetPaused(true);
     ROS_INFO("\n\n\nworld is resetting");
 
     ros::NodeHandle n;
@@ -140,12 +158,115 @@ public:
     std::stringstream ss;
 
     ss.clear();
-    ss << "SEND_REQ";
+    ss << this->request;
     srv.request.in = ss.str();
     std::cout << "Factory - sending request to server " << ss.str() << std::endl;
-
     if (client.call(srv))
     {
+      std::cout << "server response got" << std::endl;
+      ROS_INFO("IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s][%s]", srv.request.in.c_str(),
+               srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
+               srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
+    }
+
+    if (this->request == "REMOVE_RESET")
+    {
+      ROS_INFO("REMOVE is processing...");
+      RemoveModels();
+      this->request = "SET_MAP";
+
+      // std::string removeReqReset = "REMOVE_RESET";
+      // srv.request.in = removeReqReset;
+      // if (client.call(srv))
+      // {
+      //   std::cout << "Factory - sending request to server " << removeReqReset << std::endl;
+      // }
+    }
+    else if (this->request == "SET_MAP")
+    {
+      ROS_INFO("Setting map is processing...");
+
+      this->modelWallSequence = srv.response.wallSequence;
+      this->buildingEditorPath = srv.response.buildingEditorPath;
+      if (srv.response.bitmapId != -1)
+      {
+        std::ifstream stream(this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/bitmap_" +
+                             std::to_string(srv.response.bitmapId));
+        std::stringstream sstream;
+        sstream << stream.rdbuf();
+        std::string bitmap = sstream.str();
+        std::cout << "bitmap " << bitmap << std::endl;
+        std::vector<std::string> token;
+        boost::split(token, bitmap, boost::is_any_of(" "));
+
+        std::string subModelPath =
+            this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/sub_models/";
+
+        std::map<std::string, fs::path> modelSet;
+        for (const auto& entry : fs::directory_iterator(subModelPath))
+        {
+          // std::cout << entry << std::endl;
+          std::stringstream s;
+          s << entry;
+          std::string key = s.str();
+          key.erase(key.begin());
+          key.erase(key.end() - 1);
+          // std::cout << key << std::endl;
+          if (boost::algorithm::ends_with(key, ".sdf"))
+          {
+            std::vector<std::string> result;
+            boost::split(result, key, boost::is_any_of("/"));
+            std::string modelName = result[result.size() - 1].substr(0, result[result.size() - 1].size() - 4);
+
+            // std::cout << " modelName : " << modelName << " key: " << key << std::endl;
+            // std::cout << str.at(sequenceWall) << std::endl;
+            modelSet.insert({ modelName, key });
+          }
+        }
+
+        insertWall();
+
+        int i = 0;
+        for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
+        {
+          std::cout << "stoi" << token[i] << " " << srv.response.bitmapId << std::endl;
+          if (std::stoi(token[i]) == true)
+          {
+            std::cout << "written " << itr->second << std::endl;
+            sdf::SDF model;
+
+            std::ifstream ifSdfStream(itr->second, std::ifstream::in);
+            std::stringstream sdfStream;
+            std::string sdf;
+            sdfStream << ifSdfStream.rdbuf();
+            sdf = sdfStream.str();
+
+            model.SetFromString(sdf);
+            worldPtr->InsertModelSDF(model);
+            ifSdfStream.close();
+          }
+          else
+          {
+            continue;
+          }
+        }
+      }
+      else
+      {
+        insertWall();
+      }
+
+      srv.request.in = "READY_TO_EXPLORE";
+      client.call(srv);
+
+      this->request = "REMOVE_RESET";
+    }
+    else
+    {
+      ROS_INFO("illegal response token first logic here for debug purpose");
+
+      // if (client.call(srv))
+      // {
       std::cout << "server response got" << std::endl;
       /*
         int32 wallSequence
@@ -262,19 +383,21 @@ public:
       {
         insertWallWithRemoval();
       }
-    }
+      // }
 
-    // READY_TO_EXPLORE
-    ss.clear();
-    ss << "READY_TO_EXPLORE";
-    srv.request.in = ss.str();
-    if (client.call(srv))
-    {
-      worldPtr->SetPaused(false);
+      // READY_TO_EXPLORE
+
+      srv.request.in = "READY_TO_EXPLORE";
+      if (client.call(srv))
+      {
+        worldPtr->SetPaused(false);
+      }
+      // worldPtr->PauseTime();
+      // insertModelViaMP(worldPtr);
     }
-    // worldPtr->PauseTime();
-    // insertModelViaMP(worldPtr);
+    // worldPtr->ResetTime();
   }
+
   /// \brief Handle incoming message
   /// \param[in] _msg Repurpose a vector3 message. This function will
   /// only use the x component.
@@ -285,6 +408,7 @@ private:
   sdf::ElementPtr sdf;
   std::string buildingEditorPath;
   int modelWallSequence;
+  std::string request;
 };  // namespace gazebo
 
 // Register this plugin with the simulator
