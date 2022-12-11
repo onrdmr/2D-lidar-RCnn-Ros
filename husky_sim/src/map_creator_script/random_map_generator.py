@@ -789,7 +789,7 @@ def add_assets(world_gen, area):
 def createSingleRoom():
     global world_gen
     n_points = args.room_args[0]
-    if len(args.room_args) != SINGLE_ROOM_ARG_COUNT:
+    if args.choice != "all_room" and len(args.room_args) != SINGLE_ROOM_ARG_COUNT:
         raise argparse.ArgumentError("room_args have two argument.")
     x_min = y_min = args.room_args[1]
     x_max = y_max = args.room_args[2]
@@ -972,7 +972,7 @@ def resetProgram():
         world_gen.engines.reset_engines()
         world_gen.world.reset_models()
         
-        # world_gen.assets.remove("static_cylinder")
+        # world_gen.assets.remove("static_cylinmesh_acc / 100 der")
         # world_gen.assets.remove("static_box")
 
 
@@ -1014,13 +1014,44 @@ if __name__=="__main__":
             single_room_wall_point_max = args.room_args[4]
             mesh_acc =  args.room_args[5]
             multi_scale_factor = args.room_args[6] # 30
+
             # args.debug = True
-            
+
+
+
+            for i in range(single_room_count):
+
+                signal.alarm(350)
+                try:
+                    args.room_args[2] = random.randint(5, single_room_lenght / 2)
+                    args.room_args[1] = -random.randint(5, single_room_lenght / 2)
+                    args.room_args[0] = random.randint(3, single_room_wall_point_max)
+                
+                    if (random.random() < mesh_acc / 100 ):
+
+                        args.mesh = True
+                        
+                        print("creating single_room map with mesh ")
+                        createSingleRoom()
+                    else:
+                        args.mesh = False
+                        
+                        print("creating single_room map with mesh ")
+                        createSingleRoom()
+
+                except Exception as exc:
+                    print(exc)
+                    removeLastWall()
+                
+                resetProgram()
+                
+                
+
             for i in range(multi_id_min, multi_id_min+multi_room_count):
                 args.room_args[0] = i
                 args.scale_factor = random.randint(10,multi_scale_factor)
                 signal.signal(signal.SIGALRM, lambda signum, frame: raise_(Exception("timeout livelock occurs." + str(signum) + " " + str(frame))))
-                signal.alarm(200)
+                signal.alarm(300)
                 try:
                     mesh_prob = random.random()
                     if (mesh_prob < mesh_acc/100 ):
@@ -1070,32 +1101,6 @@ if __name__=="__main__":
                 resetProgram()
 
 
-            for i in range(single_room_count):
-
-                signal.alarm(350)
-                try:
-                    args.room_args[2] = random.randint(5, single_room_lenght / 2)
-                    args.room_args[1] = -random.randint(5, single_room_lenght / 2)
-                    args.room_args[0] = random.randint(3, single_room_wall_point_max)
-                
-                    if (random.random() < mesh_acc / 100 ):
-                        args.mesh = True
-                        
-                        print("creating single_room map with mesh ")
-                        createSingleRoom()
-                    else:
-                        args.mesh = False
-                        
-                        print("creating single_room map with mesh ")
-                        createSingleRoom()
-
-                except Exception as exc:
-                    print(exc)
-                    removeLastWall()
-                
-                resetProgram()
-                
-                
 
         else:
             print("There must be a choice.[single_room [N] ] or [multiple_room [N] ] or [all_room] [N][N][N][N][N][N][N]]")

@@ -14,6 +14,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <unistd.h>
+
 // using namespace std;
 namespace fs = std::filesystem;
 
@@ -177,24 +179,33 @@ public:
         std::map<std::string, fs::path> modelSet;
         physics::Model_V models = worldPtr->Models();  // modelptr vector
 
+        bool pauseState = worldPtr->IsPaused();
+        worldPtr->SetPaused(true);
+
         for (physics::ModelPtr model : models)
         {
           std::string modelName = model->GetName();
           if (modelName != "ground_plane" && modelName != "husky")
           {
-            std::cout << "removing " << model->GetName() << std::endl;
-            std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
-            a << model->GetName() << std::endl;
+            // std::cout << "removing " << model->GetName() << std::endl;
+            // std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+            // a << model->GetName() << std::endl;
 
-            model->SetName("removed");
-            model->SetSelected(true);
+            worldPtr->RemoveModel(model);
+            // buraya serverden not ready gönderilecek
+            // not ready varsa server tekrar reset edecek.
+
             // model->Reset();
-            // worldPtr->RemoveModel(model);
-            model->Fini();
-            // ~model();
+            // model->SetSelected(true);
+            // // worldPtr->(model);
+            // model->Fini();
+            // worldPtr->RemoveModel("removed");
+            // gazebo::common::Time::MSleep(500);  // ~model();
           }
         }
+        models.clear();
 
+        worldPtr->SetPaused(pauseState);
         worldPtr->ResetEntities(physics::Base::EntityType::MODEL);
         // worldPtr->EnablePhysicsEngine(true);
         worldPtr->EnableAllModels();

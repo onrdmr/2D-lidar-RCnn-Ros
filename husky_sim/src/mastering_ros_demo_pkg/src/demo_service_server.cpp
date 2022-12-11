@@ -156,6 +156,7 @@ private:
     bool singleRoom = true;
     std::cout << "setting message " << this->dbItr->second << std::endl;
     this->totalRobotPosition = 0;
+        this->totalSubModel = 0;
     for (const auto& entry : fs::directory_iterator(this->dbItr->second))
     {
       std::cout << entry << std::endl;
@@ -174,7 +175,6 @@ private:
         std::cout << "submodels" << std::endl;
         this->bitmapId = 0;
 
-        this->totalSubModel = 0;
         std::filesystem::path p1{ str.substr(1, str.size() - 2) };
         for (auto& p : std::filesystem::directory_iterator(p1))
         {
@@ -191,7 +191,7 @@ private:
         {
           this->totalRobotPosition = positionIdx;
 
-          if (this->totalSubModel != 0)
+          if (this->totalSubModel > 0)
           {
             this->bitmapId = this->robotPositionId;
           }
