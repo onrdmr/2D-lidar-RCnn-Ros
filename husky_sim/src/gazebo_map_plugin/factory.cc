@@ -95,7 +95,7 @@ public:
 
     // Send the message
     factoryPub->Publish(msg);
-    std::cout << "Model with modelWallSequence " << modelWallSequence << " is loaded " << std::endl;
+    ROS_INFO_STREAM("FACTORY : Model with modelWallSequence " << modelWallSequence << " is loaded ");
   }
 
   void insertWallWithRemoval()
@@ -150,7 +150,9 @@ public:
 
   void Reset()
   {
-    ROS_INFO("\n\n\nworld is resetting");
+    ROS_INFO("FACTORY : World is resetting ");
+    worldPtr->ResetTime();
+    worldPtr->SetPaused(true);
 
     ros::NodeHandle n;
     ros::ServiceClient client = n.serviceClient<mastering_ros_demo_pkg::demo_srv>("demo_service");
@@ -163,15 +165,15 @@ public:
     std::cout << "Factory - sending request to server " << ss.str() << std::endl;
     if (client.call(srv))
     {
-      std::cout << "server response got" << std::endl;
-      ROS_INFO("IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s][%s]", srv.request.in.c_str(),
-               srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
+      ROS_INFO("FACTORY : Server response got");
+      ROS_INFO("FACTORY : IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s][%s]",
+               srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
                srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
     }
 
     if (this->request == "REMOVE_RESET")
     {
-      ROS_INFO("REMOVE is processing...");
+      ROS_INFO("FACTORY : REMOVE is processing...");
       RemoveModels();
       this->request = "SET_MAP";
 
@@ -184,7 +186,7 @@ public:
     }
     else if (this->request == "SET_MAP")
     {
-      ROS_INFO("Setting map is processing...");
+      ROS_INFO("FACTORY : Setting map is processing...");
 
       this->modelWallSequence = srv.response.wallSequence;
       this->buildingEditorPath = srv.response.buildingEditorPath;
@@ -257,13 +259,16 @@ public:
       }
 
       srv.request.in = "READY_TO_EXPLORE";
-      client.call(srv);
+      if (client.call(srv))
+      {
+        worldPtr->SetPaused(false);
+      }
 
       this->request = "REMOVE_RESET";
     }
     else
     {
-      ROS_INFO("illegal response token first logic here for debug purpose");
+      ROS_INFO("FACTORY : Illegal response token first logic here for debug purpose");
 
       // if (client.call(srv))
       // {
@@ -277,7 +282,7 @@ public:
       */
 
       // exploration bir şey isteyebilir. onun için 1 tane daha yer olacak server için.
-      ROS_INFO("IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", srv.request.in.c_str(),
+      ROS_INFO("FACTORY : IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", srv.request.in.c_str(),
                srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
                srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str());
 
@@ -285,6 +290,7 @@ public:
       this->buildingEditorPath = srv.response.buildingEditorPath;
       if (srv.response.bitmapId != -1)
       {
+        // ROS_INFO("Factory says I will produce ")
         std::ifstream stream(this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/bitmap_" +
                              std::to_string(srv.response.bitmapId));
         std::stringstream sstream;
@@ -395,7 +401,7 @@ public:
       // worldPtr->PauseTime();
       // insertModelViaMP(worldPtr);
     }
-    // worldPtr->ResetTime();
+    worldPtr->ResetTime();
   }
 
   /// \brief Handle incoming message

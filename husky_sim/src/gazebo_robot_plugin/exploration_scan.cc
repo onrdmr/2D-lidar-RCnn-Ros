@@ -168,7 +168,7 @@ public:
         std::stringstream meshWKBSS;
         meshWKBSS << entry;
         std::string meshWKBPath = meshWKBSS.str().substr(1, meshWKBSS.str().size() - 2);
-        // std::cout << "meshWKBPath : " << meshWKBPath << std::endl;
+        // ROS_INFO_STREAM("EXPLORATION : meshWKBPath : " << meshWKBPath << std::endl);
         FILE* filp_b = fopen(meshWKBPath.c_str(), "rb");
         int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
         // printf("buffer 2 : %d bytes \n", bytes_read_b);
@@ -260,7 +260,7 @@ public:
           {
             GEOSWKBReader* reader = GEOSWKBReader_create();
             GEOSWKTWriter* writer = GEOSWKTWriter_create();
-            // std::cout << "duvar " << itr->second << " ve robot arasında kesişim aranıyor." << std::endl;
+            ROS_INFO_STREAM("EXPLORATON : duvar " << itr->second << " ve robot arasında kesişim aranıyor.");
 
             FILE* filp_b = fopen(itr->second.c_str(), "rb");
             int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
@@ -282,8 +282,8 @@ public:
             char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
             /* Print answer */
-            // printf("Intersection(A, B): %s\n", wkt_inter);
-            // printf("WallPolygon(A, B): %s\n", wall_geom);
+            ROS_INFO("EXPLORATION : Intersection(A, B): %s\n", wkt_inter);
+            ROS_INFO("EXPLORATION : WallPolygon(A, B): %s\n", wall_geom);
 
             char* output = NULL;
             output = strstr(wkt_inter, "EMPTY");
@@ -598,10 +598,10 @@ public:
   // yeni robot pozisyonunu dolduracak başa sarılacak
   void reposeRobot()
   {
-    std::cout << "repose içindeyim" << std::endl;
+    ROS_INFO("EXPLORATION : ROBOT POSITON FILE IS READING");
     std::string robotPositionPath = this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) +
                                     "/robot_position_" + std::to_string(this->robotPositionSequence);
-    std::cout << "Folder robot position : " << robotPositionPath << std::endl;
+    ROS_INFO_STREAM("EXPLORATION : Folder OF robot position FILE : " << robotPositionPath);
     std::ifstream robotPosFile(robotPositionPath);
 
     std::string robotPositions;
@@ -617,71 +617,82 @@ public:
     // std::cout << "robot position " << robotPositionPath << " " << position.x << " " << position.y << " " <<
     // position.yaw
     //           << std::endl;
-    std::cout << std::setprecision(15) << position.x << " " << position.y << " " << position.yaw << std::endl;
+    ROS_INFO_STREAM("EXPLORATION : ROBOT X,Y,yaw info : " << std::setprecision(15) << position.x << " " << position.y
+                                                          << " " << position.yaw);
     this->robotPositionSequence++;
   }
 
   void Reset()
   {
     // server client ile hangi map olduğu bilgisi alınacak.
+    this->model->GetWorld()->ResetTime();
+    this->model->GetWorld()->SetPaused(true);
     ros::NodeHandle n;
     ros::ServiceClient client = n.serviceClient<mastering_ros_demo_pkg::demo_srv>("demo_service");
     mastering_ros_demo_pkg::demo_srv srv;
     std::stringstream ss;
     ss << "SEND_REQ";
     srv.request.in = ss.str();
-    std::cout << "requesting" << ss.str() << std::endl;
+    ROS_INFO_STREAM("EXPLORATION : Exploratin Scan Requesting: " << ss.str());
+
+    // ros::Duration(1).sleep();
     if (client.call(srv))
     {
-      ROS_INFO("IN EXLPORATON_SCAN | From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", srv.request.in.c_str(),
-               srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
-               srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str());
+      ROS_INFO("EXPLORATION : IN EXLPORATION_SCAN | From Client [%s], Server says [%d] [%d] [%d] [%s] [%s] [%s]",
+               srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
+               srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
       this->buildingEditorPath = srv.response.buildingEditorPath;
       this->modelWallSequence = srv.response.wallSequence;
       this->robotPositionSequence = srv.response.robotPositionId;
       this->mapType = srv.response.mapType;
       this->bitmapId = srv.response.bitmapId;
     }
-    std::cout << "buraya geldim mi" << std::endl;
-    reposeRobot();
-    // change second position
-    // position.x = 1;
-    // position.y = 1;
-    // position.yaw = 2;
-    // gazebo::common::PoseAnimationPtr anim(
-    //     // name the animation "test",
-    //     // make it last 10 seconds,
-    //     // and set it on a repeat loop
-    //     new gazebo::common::PoseAnimation("test", simTimePerIter, true));
-    // this->anim = anim;
-
-    this->model->StopAnimation();
-    // anim->~PoseAnimation();
-
-    gazebo::common::PoseAnimationPtr anim(
-        // name the animation "test",
-        // make it last 10 seconds,
-        // and set it on a repeat loop
-        new gazebo::common::PoseAnimation("test", simTimePerIter, true));
-    this->anim = anim;
-
-    explorationLogic(anim);
-    this->model->SetAnimation(anim);
-    ss.clear();
-    ss.str("");
-    ss << "READY_TO_EXPLORE";
-    srv.request.in = ss.str();
-    std::cout << "sending request to server " << ss.str() << std::endl;
-
-    if (client.call(srv))
+    if (srv.response.out == "true")
     {
-      std::cout << "server response got" << std::endl;
+      ROS_INFO("EXPLORATION : EXPLORATION is starting...");
+      reposeRobot();
+      // change second position
+      // position.x = 1;
+      // position.y = 1;
+      // position.yaw = 2;
+      // gazebo::common::PoseAnimationPtr anim(
+      //     // name the animation "test",
+      //     // make it last 10 seconds,
+      //     // and set it on a repeat loop
+      //     new gazebo::common::PoseAnimation("test", simTimePerIter, true));
+      // this->anim = anim;
+
+      this->model->StopAnimation();
+      // anim->~PoseAnimation();
+
+      gazebo::common::PoseAnimationPtr anim(
+          // name the animation "test",
+          // make it last 10 seconds,
+          // and set it on a repeat loop
+          new gazebo::common::PoseAnimation("test", simTimePerIter, false));
+      this->anim = anim;
+
+      explorationLogic(anim);
+      this->model->SetAnimation(anim);
+
+      // ss.clear();
+      // ss.str("");
+      // ss << "READY_TO_EXPLORE";
+      // srv.request.in = ss.str();
+      // ROS_INFO_STREAM("sending request to server " << ss.str());
+
+      // if (client.call(srv))
+      // {
+      //   this->model->GetWorld()->ResetTime();
+      //   ROS_INFO("server response got in EXPLORATION");
+      // }
+      // bu harita eklendiğinde çalışacak
+      // const physics::WorldPtr worldPtr = model->GetWorld();
+      // std::cout << "Animated_box plugin is loaded in " << worldPtr->Name() << std::endl;
+      // physics::ModelPtr wallModel = worldPtr->ModelByIndex(2);
+      // std::cout << wallModel->GetName() << std::endl;
     }
-    // bu harita eklendiğinde çalışacak
-    // const physics::WorldPtr worldPtr = model->GetWorld();
-    // std::cout << "Animated_box plugin is loaded in " << worldPtr->Name() << std::endl;
-    // physics::ModelPtr wallModel = worldPtr->ModelByIndex(2);
-    // std::cout << wallModel->GetName() << std::endl;
+    this->model->GetWorld()->SetPaused(false);
   }
 
 private:
@@ -729,11 +740,10 @@ private:
 
     // std::ofstream deneme("deneme");
     // robot polygon hatalı
-    // std::cout << "sonraki ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
-    //                  std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + "
-    //                  " + std::to_string(point3.y) + ", " + std::to_string(point4.x) + " " + std::to_string(point4.y)
-    //                  + "," + std::to_string(point1.x) + " " + std::to_string(point1.y) + "))"
-    //           << std::endl;
+    ROS_INFO_STREAM("EXPLORATION : ROBOT POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " +
+                    std::to_string(point2.x) + " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " +
+                    std::to_string(point3.y) + "," + std::to_string(point4.x) + " " + std::to_string(point4.y) + "," +
+                    std::to_string(point1.x) + " " + std::to_string(point1.y) + "))");
 
     return "POLYGON((" + std::to_string(point1.x) + " " + std::to_string(point1.y) + ", " + std::to_string(point2.x) +
            " " + std::to_string(point2.y) + ", " + std::to_string(point3.x) + " " + std::to_string(point3.y) + ", " +

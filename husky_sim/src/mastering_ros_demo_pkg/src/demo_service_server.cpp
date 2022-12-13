@@ -69,6 +69,8 @@ public:
     this->recordSubF = NULL;
     this->recordSubR = NULL;
     this->recordSubOdom = NULL;
+    this->readyToExplore = true;
+
     // std::map<long int, fs::path> dataset;
     for (const auto& entry : fs::directory_iterator(buildingPath))
     {
@@ -210,37 +212,37 @@ private:
   }
   void reset_sim_callback(const rosgraph_msgs::Clock::ConstPtr& msg)
   {
-    // ROS_INFO_STREAM("Received " << msg->clock << ros::Time::now());
     // const std::lock_guard<std::mutex> lock(mutex);
     std::stringstream str;
     str << msg->clock;
     double simTime = std::stod(str.str());
+    // ROS_INFO_STREAM("resetTime :" << this->resetTime << "sim time:" << simTime);
     if (this->resetTime != -1 && simTime > this->resetTime)  // ilk koşul exploration scan den dur mesajı gelirse
     {
       const std::lock_guard<std::mutex> lock(mutex);
 
       if (this->recordSubF != NULL)
       {
-        std::cout << "thread sonlandır." << std::endl;
+        ROS_INFO("thread sonlandır.");
         this->recordSubF->unsubscribe();
         this->recordSubOdom->unsubscribe();
-        this->recordSubR->unsubscribe();
+        // this->recordSubR->unsubscribe();
 
         this->recordSubF = NULL;
-        this->recordSubR = NULL;
+        // this->recordSubR = NULL;
         this->recordSubOdom = NULL;
 
-        std::cout << "spin kırılıp yeni record lar yazılacak" << std::endl;
+        ROS_INFO("SERVICE : spin kırıldı. Record yazma sonlandı.");
       }
       ros::NodeHandle n;
       ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
       std_srvs::Empty srv;
       // std::cout << mapType << " " << wallSequenceId << " " << robotPositionId << "" << bitmapId << " " << std::endl;
-      ROS_INFO_STREAM("Received " << msg->clock << " " << ros::Time::now());
-      ROS_INFO("Resetting Gazebo World");
+      ROS_INFO_STREAM("SERVICE : Received " << msg->clock << " " << ros::Time::now());
+      ROS_INFO("SERVICE : Resetting Gazebo World");
       if (resetGazebo.call(srv))
       {
-        ROS_INFO("Waiting for duration.");
+        ROS_INFO("SERVICE : Waiting for duration.");
         ros::Duration(1).sleep();
 
         // ros::getGlobalCallbackQueue()->clear();
@@ -255,10 +257,8 @@ private:
   void writeBagFilesToWall()
   {
     std::string sensorDataPath = this->buildingEditorPath + "/wall" + std::to_string(this->wallSequenceId) + "/sensors";
-    std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", ios::out | ios::in);
-    a << sensorDataPath << " : " << this->defaultBagPath << std::endl;
-    a.close();
-    std::cout << sensorDataPath << " : " << this->defaultBagPath << std::endl;
+
+    ROS_INFO_STREAM(sensorDataPath << " : " << this->defaultBagPath);
     if (!boost::filesystem::exists(sensorDataPath))
     {
       boost::filesystem::create_directory(sensorDataPath);
@@ -266,41 +266,39 @@ private:
 
     if (!boost::filesystem::exists(sensorDataPath + "/" + std::to_string(this->robotPositionId)))
     {
-      std::cout << "yazılacak path: " << this->defaultBagPath << std::endl;
-      a << this->defaultBagPath << std::endl;
+      ROS_INFO_STREAM("SERVICE : yazılacak bag path: " << this->defaultBagPath);
       boost::filesystem::create_directory(sensorDataPath + "/" + std::to_string(this->robotPositionId));
 
       boost::filesystem::rename(this->defaultBagPath + this->filenameFrontLaserBag,
                                 sensorDataPath + "/" + std::to_string(this->robotPositionId) + "/" +
                                     this->filenameFrontLaserBag);
-      boost::filesystem::rename(this->defaultBagPath + this->filenameRearLaserBag,
-                                sensorDataPath + "/" + std::to_string(this->robotPositionId) + "/" +
-                                    this->filenameRearLaserBag);
+      // boost::filesystem::rename(this->defaultBagPath + this->filenameRearLaserBag,
+      //                           sensorDataPath + "/" + std::to_string(this->robotPositionId) + "/" +
+      //                               this->filenameRearLaserBag);
       boost::filesystem::rename(this->defaultBagPath + this->filenameOdomBag,
                                 sensorDataPath + "/" + std::to_string(this->robotPositionId) + "/" +
                                     this->filenameOdomBag);
     }
     else
     {
-      ROS_INFO("dosya zaten var");
+      ROS_INFO("SERVICE : dosya zaten var");
     }
-    a.close();
   }
 
-  void sync_callback(const sensor_msgs::LaserScan::ConstPtr& laserScanR,
-                     const sensor_msgs::LaserScan::ConstPtr& laserScanF, const nav_msgs::Odometry::ConstPtr& odom)
+  void sync_callback(  // const sensor_msgs::LaserScan::ConstPtr& laserScanR,
+      const sensor_msgs::LaserScan::ConstPtr& laserScanF, const nav_msgs::Odometry::ConstPtr& odom)
   {
-    // ROS_INFO("veriler bag olarak kaydediliyor.");
+    ROS_INFO("SERVICE : veriler bag olarak kaydediliyor. Append");
 
     rosbag::Bag bagF(this->filenameFrontLaserBag, rosbag::bagmode::BagMode::Append);
-    rosbag::Bag bagR(this->filenameRearLaserBag, rosbag::bagmode::BagMode::Append);
+    // rosbag::Bag bagR(this->filenameRearLaserBag, rosbag::bagmode::BagMode::Append);
     rosbag::Bag bagO(this->filenameOdomBag, rosbag::bagmode::BagMode::Append);
     // std::cout << "burada kaydetme olacak" << std::endl;
     try
     {
       bagF.write("/front/scan", ros::Time::now(), laserScanF);
 
-      bagR.write("/rear/scan", ros::Time::now(), laserScanR);
+      // bagR.write("/rear/scan", ros::Time::now(), laserScanR);
 
       bagO.write("/odometry/filtered", ros::Time::now(), odom);
     }
@@ -309,9 +307,9 @@ private:
       std::cout << "exception occured this sequence" << std::endl;
     }
 
-    bagF.close();
-    bagO.close();
-    bagR.close();
+    // bagF.close();
+    // bagO.close();
+    // bagR.close();
   }
 
   void recordData()
@@ -323,28 +321,29 @@ private:
 
     this->recordSpinner = new ros::AsyncSpinner(1);
     ros::NodeHandle n;
-    ros::Duration(1).sleep();
+    ROS_INFO("SERVICE : record data sleep 2 duration");
+    ros::Duration(2).sleep();
 
+    ROS_INFO("SERVICE : Bag dosyası oluşturuluyor.");
     // ön lazer , alt lazer
     rosbag::Bag bag(this->filenameFrontLaserBag, rosbag::bagmode::BagMode::Write);
-    rosbag::Bag bag2(this->filenameRearLaserBag, rosbag::bagmode::BagMode::Write);
+    // rosbag::Bag bag2(this->filenameRearLaserBag, rosbag::bagmode::BagMode::Write);
     rosbag::Bag bag3(this->filenameOdomBag, rosbag::bagmode::BagMode::Write);
 
     bag.close();
-    bag2.close();
+    // bag2.close();
     bag3.close();
 
     this->recordSubF = new message_filters::Subscriber<sensor_msgs::LaserScan>(n, "/front/scan", 1000);
-    this->recordSubR = new message_filters::Subscriber<sensor_msgs::LaserScan>(n, "/rear/scan", 1000);
+    // this->recordSubR = new message_filters::Subscriber<sensor_msgs::LaserScan>(n, "/rear/scan", 1000);
     this->recordSubOdom = new message_filters::Subscriber<nav_msgs::Odometry>(n, "/odometry/filtered", 1000);
 
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, sensor_msgs::LaserScan,
-                                                            nav_msgs::Odometry>
-        SyncPolicy;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry> SyncPolicy;
 
-    message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), *this->recordSubF, *this->recordSubR,
+    message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(1000), *this->recordSubF  //, *this->recordSubR
+                                                   ,
                                                    *this->recordSubOdom);
-    sync.registerCallback(boost::bind(&MessageHandler::sync_callback, this, _1, _2, _3));
+    sync.registerCallback(boost::bind(&MessageHandler::sync_callback, this, _1, _2));
     // this->recordSubR = n.subscribe("/clock", 100, &MessageHandler::clockFoo, this);
     // this->recordSubF = n.subscribe("/front/scan", 100, &MessageHandler::laserScanCallbackF, this);
     // this->recordSubF = n.subscribe("/odometry/filtered", 100, &MessageHandler::laserScanCallbackOdom, this);
@@ -354,7 +353,7 @@ private:
     // ros::waitForShutdown();
     recordSpin(0.01);
 
-    std::cout << "çağrı thread ros spin kırıldı sonlandırır" << std::endl;
+    ROS_INFO("SERVICE : çağrı thread ros spin kırıldı sonlandırır");
   }
 
   void recordSpin(const float& duration)
@@ -375,30 +374,9 @@ private:
 
   void clockFoo(const rosgraph_msgs::Clock::ConstPtr& foo)
   {
-    ROS_INFO("spinning while recording");
+    ROS_INFO("SERVICE : spinning while recording");
   }
 
-  // void laserScanCallbackR(const sensor_msgs::LaserScan::ConstPtr& laserScanR)
-  // {
-  //   std::cout << "burada kaydetme olacak" << std::endl;
-  //   rosbag::Bag bag("rear_scan.bag", rosbag::bagmode::BagMode::Append);
-  //   bag.write("/rear/scan", ros::Time::now(), laserScanR);
-  //   bag.close();
-  // }
-  // void laserScanCallbackF(const sensor_msgs::LaserScan::ConstPtr& laserScanF)
-  // {
-  //   std::cout << "burada kaydetme olacak" << std::endl;
-  //   rosbag::Bag bag("front_scan.bag", rosbag::bagmode::BagMode::Append);
-  //   bag.write("/rear/scan", ros::Time::now(), laserScanF);
-  //   bag.close();
-  // }
-  // void laserScanCallbackOdom(const nav_msgs::Odometry::ConstPtr& odom)
-  // {
-  //   std::cout << "burada kaydetme olacak" << std::endl;
-  //   rosbag::Bag bag("odometry.bag", rosbag::bagmode::BagMode::Append);
-  //   bag.write("/odometry/filtered", ros::Time::now(), odom);
-  //   bag.close();
-  // }
   bool demo_service_callback(mastering_ros_demo_pkg::demo_srv::Request& req,
                              mastering_ros_demo_pkg::demo_srv::Response& res)
   {
@@ -414,19 +392,30 @@ private:
       res.buildingEditorPath = this->buildingEditorPath;
       res.out = "SET_MAP";
       this->readyToExplore = false;
-      ROS_INFO("IN:SERVER || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", req.in.c_str(), res.wallSequence,
-               res.robotPositionId, res.bitmapId, res.mapType.c_str(), res.buildingEditorPath.c_str());
+      ROS_INFO("SERVICE : IN:SERVER || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", req.in.c_str(),
+               res.wallSequence, res.robotPositionId, res.bitmapId, res.mapType.c_str(),
+               res.buildingEditorPath.c_str());
     }
     else if (req.in == "READY_TO_EXPLORE")
     {
-      this->readyToExplore = true;
-      // std::cout << "Not Implemented yet" << std::endl;
+      // this->readyToExplore = true;
+      ROS_INFO("SERVICE : Record thread created");
       this->recordThread = std::thread([=] { this->recordData(); });
       this->recordThread.detach();
     }
-    // else if (req.in == "EXPLORE")
-    // {
-    // }
+    else if (req.in == "SEND_REQ")
+    {
+      res.wallSequence = this->wallSequenceId;
+      res.robotPositionId = this->robotPositionId;
+      res.bitmapId = this->bitmapId;
+      res.mapType = this->mapType;
+      res.buildingEditorPath = this->buildingEditorPath;
+      res.out = (this->readyToExplore) ? "true" : "false";
+
+      ROS_INFO("SERVICE : IN:SERVER || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s]", req.in.c_str(),
+               res.wallSequence, res.robotPositionId, res.bitmapId, res.mapType.c_str(),
+               res.buildingEditorPath.c_str());
+    }
 
     else if (req.in == "REMOVE_RESET")
     {
@@ -439,7 +428,8 @@ private:
         // res.out = "SET_MAP";
         if (resetGazebo.call(srv))
         {
-          ROS_INFO("Resetting Gazebo World with REMOVED MODELS");
+          this->readyToExplore = true;
+          ROS_INFO("SERVICE : Resetting Gazebo World with REMOVED MODELS");
         }
         setNewExplorationStates();
       });
@@ -476,7 +466,7 @@ private:
 
   void setNewExplorationStates()
   {
-    ROS_INFO("setNewExploration State this->bitmapId:[%d] this->totalRobotPosition:[%d]", this->bitmapId,
+    ROS_INFO("SERVICE : setNewExploration State this->bitmapId:[%d] this->totalRobotPosition:[%d]", this->bitmapId,
              this->totalRobotPosition);
 
     this->bitmapId = findBitmapId();
@@ -558,7 +548,7 @@ private:
   ros::AsyncSpinner* recordSpinner;
   std::thread recordThread;
   const std::string filenameFrontLaserBag = "front_scan.bag";
-  const std::string filenameRearLaserBag = "rear_scan.bag";
+  // const std::string filenameRearLaserBag = "rear_scan.bag";
   const std::string filenameOdomBag = "odometry.bag";
   const std::string defaultBagPath = getHomeDirectory() + "/.ros/";
 
@@ -571,7 +561,7 @@ int main(int argc, char** argv)
   ros::MultiThreadedSpinner spinner(2);
   MessageHandler* handler = new MessageHandler("/home/onur/building_editor_models");
 
-  ROS_INFO("Ready to receive from client.");
+  ROS_INFO("SERVICE : Ready to receive from client.");
   // thread_demo_clock_subscriber(argc, argv);
   std::thread update = handler->demo_clock_subscriber_thread(argc, argv, spinner);
   std::thread server = handler->demo_service_server_thread(argc, argv, spinner);
