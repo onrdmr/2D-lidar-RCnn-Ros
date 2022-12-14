@@ -36,7 +36,7 @@ WALL_THICKNESS = 0.15
 WALL_HEIGHT = 2
 
 HUSKY_SIZE_X = 1.2#0.98740000
-HUSKY_SIZE_Y = 0.7#0.57090000
+HUSKY_SIZE_Y = 1#0.57090000
 
 stat_sign_factor = 1.5#1.645
 
@@ -54,7 +54,7 @@ lastWallSequence = None # static variable of lastWallSequence function
 world_gen = None
 
 parser.add_argument('--spawn-count', '-r', '--robot-count', type=int ,default=5)
-parser.add_argument('--scale-factor', '-s', type=float, default=10.0) # it must be greater than 10 otherwise robot can not move other rooms
+parser.add_argument('--scale-factor', '-s', type=float, default=15.0) # it must be greater than 10 otherwise robot can not move other rooms
 
 
 parser.add_argument('choice', choices=['single_room', 'multi_room', 'all_room'])

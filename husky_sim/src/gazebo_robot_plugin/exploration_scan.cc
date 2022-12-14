@@ -98,8 +98,8 @@ public:
   {
     srand((unsigned)time(NULL));
 
-    ROBOT_SIZE = 0.55;  // 0.7
-    ROBOT_WING = 0.4;
+    ROBOT_SIZE = 1.2;  // 0.7
+    ROBOT_WING = 0.35;
 
     /* Send notice and error messages to our stdout handler */
     /* Done */
@@ -189,8 +189,8 @@ public:
         char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
         /* Print answer */
-        // printf("Intersection(A, B): %s\n", wkt_inter);
-        // printf("WallPolygon(A, B): %s\n", wall_geom);
+        ROS_INFO("Intersection(A, B): %s\n", wkt_inter);
+        ROS_INFO("WallPolygon(A, B): %s\n", wall_geom);
 
         char* output = NULL;
         output = strstr(wkt_inter, "EMPTY");
@@ -198,6 +198,7 @@ public:
         if (output == NULL)
         {
           intersection = true;
+          ROS_INFO("NULLDAN KESİŞİM ÇIKTI");
           GEOSWKBReader_destroy(reader);
           GEOSWKTWriter_destroy(writer);
           GEOSGeom_destroy(geom_b);
@@ -213,8 +214,7 @@ public:
         GEOSGeom_destroy(inter);
         GEOSFree(wkt_inter);
       }
-      GEOSWKTReader_destroy(readerWKT);
-      GEOSGeom_destroy(geom_a);
+
       /* Clean up everything we allocated */
 
       if (this->bitmapId != -1)
@@ -237,8 +237,8 @@ public:
             boost::split(result, key, boost::is_any_of("/"));
             std::string modelName = result[result.size() - 1].substr(0, result[result.size() - 1].size() - 4);
 
-            // std::cout << " modelName : " << modelName << " key: " << key << std::endl;
-            // std::cout << str.at(sequenceWall) << std::endl;
+            ROS_INFO_STREAM(" modelName : " << modelName << " key: " << key);
+
             modelSet.insert({ modelName, key });
           }
         }
@@ -253,6 +253,7 @@ public:
         boost::split(token, bitmap, boost::is_any_of(" "));
 
         int i = 0;
+
         for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
         {
           // std::cout << "stoi" << token[i] << " " << this->bitmapId << std::endl;
@@ -264,15 +265,17 @@ public:
 
             FILE* filp_b = fopen(itr->second.c_str(), "rb");
             int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
-            // printf("buffer 2 : %d bytes \n", bytes_read_b);
+            ROS_INFO("buffer 2 : %d bytes \n", bytes_read_b);
             fclose(filp_b);
             //   unsigned char* a;
             //   a = (unsigned char*)wkb_b;
             //   /* Read the WKT into geometry objects */
 
             GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
+            ROS_INFO("read geom_b");
             /* Calculate the intersection */
             GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
+            ROS_INFO("intersection doing..");
 
             /* Convert result to WKT */
 
@@ -310,11 +313,12 @@ public:
           {
             continue;
           }
-          GEOSWKTReader_destroy(readerWKT);
-          GEOSGeom_destroy(geom_a);
+
           /* Clean up everything we allocated */
         }
       }
+      GEOSWKTReader_destroy(readerWKT);
+      GEOSGeom_destroy(geom_a);
     }
 
     else if (this->mapType == "single-room")
@@ -350,8 +354,8 @@ public:
       char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
       /* Print answer */
-      // printf("Intersection(A, B): %s\n", wkt_inter);
-      // printf("WallPolygon(A, B): %s\n", wall_geom);
+      ROS_INFO("Intersection(A, B): %s\n", wkt_inter);
+      ROS_INFO("WallPolygon(A, B): %s\n", wall_geom);
 
       char* output = NULL;
       output = strstr(wkt_inter, "EMPTY");
@@ -391,15 +395,15 @@ public:
           std::string key = s.str();
           key.erase(key.begin());
           key.erase(key.end() - 1);
-          // std::cout << key << std::endl;
+
           if (boost::algorithm::ends_with(key, ".wkb"))
           {
             std::vector<std::string> result;
             boost::split(result, key, boost::is_any_of("/"));
             std::string modelName = result[result.size() - 1].substr(0, result[result.size() - 1].size() - 4);
 
-            // std::cout << " modelName : " << modelName << " key: " << key << std::endl;
-            // std::cout << str.at(sequenceWall) << std::endl;
+            ROS_INFO_STREAM(" modelName : " << modelName << " key: " << key);
+            // ROS_INFO_STREAM(str.at(sequenceWall));
             modelSet.insert({ modelName, key });
           }
         }
@@ -409,23 +413,23 @@ public:
         std::stringstream sstream;
         sstream << stream.rdbuf();
         std::string bitmap = sstream.str();
-        // std::cout << "bitmap " << bitmap << std::endl;
+        ROS_INFO_STREAM("bitmap " << bitmap);
         std::vector<std::string> token;
         boost::split(token, bitmap, boost::is_any_of(" "));
 
         int i = 0;
         for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
         {
-          // std::cout << "stoi" << token[i] << " " << this->bitmapId << std::endl;
+          ROS_INFO_STREAM("stoi" << token[i] << " " << this->bitmapId);
           if (std::stoi(token[i]) == true)
           {
             GEOSWKBReader* reader = GEOSWKBReader_create();
             GEOSWKTWriter* writer = GEOSWKTWriter_create();
-            // std::cout << "duvar " << itr->second << " ve robot arasında kesişim aranıyor." << std::endl;
+            ROS_INFO_STREAM("duvar " << itr->second << " ve robot arasında kesişim aranıyor.");
 
             FILE* filp_b = fopen(itr->second.c_str(), "rb");
             int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
-            // printf("buffer 2 : %d bytes \n", bytes_read_b);
+            ROS_INFO("buffer 2 : %d bytes \n", bytes_read_b);
             fclose(filp_b);
             //   unsigned char* a;
             //   a = (unsigned char*)wkb_b;
@@ -443,8 +447,8 @@ public:
             char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
             /* Print answer */
-            // printf("Intersection(A, B): %s\n", wkt_inter);
-            // printf("WallPolygon(A, B): %s\n", wall_geom);
+            ROS_INFO("Intersection(A, B): %s\n", wkt_inter);
+            ROS_INFO("WallPolygon(A, B): %s\n", wall_geom);
 
             char* output = NULL;
             output = strstr(wkt_inter, "EMPTY");
@@ -519,13 +523,11 @@ public:
 
     ignition::math::AxisAlignedBox rBox = _parent->CollisionBoundingBox();
 
-    ROBOT_SIZE = rBox.XLength() + 0.1;  // 0.7
-    ROBOT_WING = (rBox.YLength() + 0.1) / 2;
+    ROBOT_SIZE = (rBox.XLength()) / 2;  // 0.7
+    ROBOT_WING = (rBox.YLength()) / 2;  //
 
-    std::cout << "robot size : " << rBox.XLength() << " " << rBox.YLength() << std::endl;
-    std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
-    a << "robot size : " << rBox.XLength() << " " << rBox.YLength() << std::endl;
-    a.close();
+    ROS_INFO_STREAM("robot size : " << rBox.XLength() << " " << rBox.YLength());
+
     // exit();
     // explorationLogic(anim);
     // this->model->SetAnimation(anim);
@@ -542,17 +544,19 @@ public:
     key->Translation(ignition::math::Vector3d(position.x, position.y, 0.132273));
     key->Rotation(ignition::math::Quaterniond(0, 0, position.yaw));
     // // log frame
-    // std::cout << "frame is " << 0 << std::endl;
-    // std::cout << "x: " << position.x << "y:" << position.y << "yaw:" << position.yaw << std::endl;
+    ROS_INFO_STREAM("frame is " << 0);
+    ROS_INFO_STREAM("x: " << position.x << "y:" << position.y << "yaw:" << position.yaw);
 
     int sampleFactor = 2;
     int sample = simTimePerIter * sampleFactor;
+    bool map_creator_err = false;
     if (IntersectionCheck(position.x, position.y, position.yaw))
     {
-      std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
-      a << "ilk durumda kesişim var map_creator_script hatalı" << std::endl;
-      std::cout << "ilk durumda kesişim var map_creator_script hatalı" << std::endl;
-      a.close();
+      map_creator_err = true;
+      // std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
+      // a << "ilk durumda kesişim var map_creator_script hatalı" << std::endl;
+      ROS_INFO("ilk durumda kesişim var map_creator_script hatalı");
+      // a.close();
     }
     for (int i = 1; i <= sample; i++)
     {
@@ -565,7 +569,7 @@ public:
 
       if (IntersectionCheck(x, y, yaw))
       {
-        // std::cout << i << " ci örnekte kesişim bulundu. " << std::endl;
+        ROS_INFO_STREAM("frame " << i << " ci örnekte kesişim bulundu. " << map_creator_err);
         i--;
         continue;
       }
@@ -576,8 +580,8 @@ public:
       position.x = x;
       position.y = y;
       position.yaw = yaw;
-      // std::cout << "frame is " << keyFrame << std::endl;
-      // std::cout << "x: " << position.x << "y:" << position.y << "yaw:" << position.yaw << std::endl;
+      ROS_INFO_STREAM("frame is " << keyFrame);
+      ROS_INFO_STREAM("x: " << position.x << "y:" << position.y << "yaw:" << position.yaw);
       key->Translation(ignition::math::Vector3d(position.x, position.y, 0.132273));
       key->Rotation(ignition::math::Quaterniond(0, 0, position.yaw));
     }
@@ -610,10 +614,7 @@ public:
     // position.yaw = -2.385220960471571d;
 
     robotPosFile >> position.x >> position.y >> position.yaw;
-    std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
-    a << "robot position " << robotPositionPath << " " << position.x << " " << position.y << " " << position.yaw
-      << std::endl;
-    a.close();
+
     // std::cout << "robot position " << robotPositionPath << " " << position.x << " " << position.y << " " <<
     // position.yaw
     //           << std::endl;
