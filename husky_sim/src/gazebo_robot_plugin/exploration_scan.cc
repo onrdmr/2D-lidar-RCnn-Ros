@@ -189,8 +189,8 @@ public:
         char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
         /* Print answer */
-        ROS_INFO("Intersection(A, B): %s\n", wkt_inter);
-        ROS_INFO("WallPolygon(A, B): %s\n", wall_geom);
+        ROS_INFO("EXPLORATION : Intersection(A, B): %s\n", wkt_inter);
+        ROS_INFO("EXPLORATION : WallPolygon(A, B): %s\n", wall_geom);
 
         char* output = NULL;
         output = strstr(wkt_inter, "EMPTY");
@@ -198,7 +198,7 @@ public:
         if (output == NULL)
         {
           intersection = true;
-          ROS_INFO("NULLDAN KESİŞİM ÇIKTI");
+          ROS_INFO("EXPLORATION : NULLDAN KESİŞİM ÇIKTI");
           GEOSWKBReader_destroy(reader);
           GEOSWKTWriter_destroy(writer);
           GEOSGeom_destroy(geom_b);
@@ -265,17 +265,17 @@ public:
 
             FILE* filp_b = fopen(itr->second.c_str(), "rb");
             int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
-            ROS_INFO("buffer 2 : %d bytes \n", bytes_read_b);
+            ROS_INFO("EXPLORATION : buffer 2 : %d bytes \n", bytes_read_b);
             fclose(filp_b);
             //   unsigned char* a;
             //   a = (unsigned char*)wkb_b;
             //   /* Read the WKT into geometry objects */
 
             GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
-            ROS_INFO("read geom_b");
+            ROS_INFO("EXPLORATION : read geom_b");
             /* Calculate the intersection */
             GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
-            ROS_INFO("intersection doing..");
+            ROS_INFO("EXPLORATION : intersection doing..");
 
             /* Convert result to WKT */
 
@@ -323,14 +323,14 @@ public:
 
     else if (this->mapType == "single-room")
     {
-      std::cout << "single-room folder path "
-                << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/" << std::endl;
+      ROS_INFO_STREAM("EXPLORATION : single-room folder path "
+                      << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/");
 
       std::string entry = this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/wall.wkb";
 
       GEOSWKBReader* reader = GEOSWKBReader_create();
       GEOSWKTWriter* writer = GEOSWKTWriter_create();
-      std::cout << "duvar " << entry << " ve robot arasında kesişim aranıyor." << std::endl;
+      ROS_INFO_STREAM("EXPLORATION : duvar " << entry << " ve robot arasında kesişim aranıyor.");
 
       std::string meshWKBPath = entry;
       // std::cout << "meshWKBPath : " << meshWKBPath << std::endl;
@@ -354,8 +354,8 @@ public:
       char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
       /* Print answer */
-      ROS_INFO("Intersection(A, B): %s\n", wkt_inter);
-      ROS_INFO("WallPolygon(A, B): %s\n", wall_geom);
+      ROS_INFO("EXPLORATION : Intersection(A, B): %s\n", wkt_inter);
+      ROS_INFO("EXPLORATION : WallPolygon(A, B): %s\n", wall_geom);
 
       char* output = NULL;
       output = strstr(wkt_inter, "EMPTY");
@@ -402,7 +402,7 @@ public:
             boost::split(result, key, boost::is_any_of("/"));
             std::string modelName = result[result.size() - 1].substr(0, result[result.size() - 1].size() - 4);
 
-            ROS_INFO_STREAM(" modelName : " << modelName << " key: " << key);
+            ROS_INFO_STREAM("EXPLORATION :  modelName : " << modelName << " key: " << key);
             // ROS_INFO_STREAM(str.at(sequenceWall));
             modelSet.insert({ modelName, key });
           }
@@ -413,23 +413,23 @@ public:
         std::stringstream sstream;
         sstream << stream.rdbuf();
         std::string bitmap = sstream.str();
-        ROS_INFO_STREAM("bitmap " << bitmap);
+        ROS_INFO_STREAM("EXLPORATION : bitmap " << bitmap);
         std::vector<std::string> token;
         boost::split(token, bitmap, boost::is_any_of(" "));
 
         int i = 0;
         for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
         {
-          ROS_INFO_STREAM("stoi" << token[i] << " " << this->bitmapId);
+          ROS_INFO_STREAM("EXPLORATION : stoi" << token[i] << " " << this->bitmapId);
           if (std::stoi(token[i]) == true)
           {
             GEOSWKBReader* reader = GEOSWKBReader_create();
             GEOSWKTWriter* writer = GEOSWKTWriter_create();
-            ROS_INFO_STREAM("duvar " << itr->second << " ve robot arasında kesişim aranıyor.");
+            ROS_INFO_STREAM("EXPLORATION : duvar " << itr->second << " ve robot arasında kesişim aranıyor.");
 
             FILE* filp_b = fopen(itr->second.c_str(), "rb");
             int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
-            ROS_INFO("buffer 2 : %d bytes \n", bytes_read_b);
+            ROS_INFO("EXPLORATION : buffer 2 : %d bytes \n", bytes_read_b);
             fclose(filp_b);
             //   unsigned char* a;
             //   a = (unsigned char*)wkb_b;
@@ -447,8 +447,8 @@ public:
             char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
             /* Print answer */
-            ROS_INFO("Intersection(A, B): %s\n", wkt_inter);
-            ROS_INFO("WallPolygon(A, B): %s\n", wall_geom);
+            ROS_INFO("EXPLORATION : Intersection(A, B): %s\n", wkt_inter);
+            ROS_INFO("EXPLORATION : WallPolygon(A, B): %s\n", wall_geom);
 
             char* output = NULL;
             output = strstr(wkt_inter, "EMPTY");
@@ -514,19 +514,19 @@ public:
     // this->model->GetWorld()
     // create the animation
     this->simTimePerIter = 10;
-    gazebo::common::PoseAnimationPtr anim(
-        // name the animation "test",
-        // make it last 10 seconds,
-        // and set it on a repeat loop
-        new gazebo::common::PoseAnimation("test", simTimePerIter, false));
-    this->anim = anim;
+    // gazebo::common::PoseAnimationPtr anim(
+    //     // name the animation "test",
+    //     // make it last 10 seconds,
+    //     // and set it on a repeat loop
+    //     new gazebo::common::PoseAnimation("test", simTimePerIter, false));
+    // this->anim = anim;
 
     ignition::math::AxisAlignedBox rBox = _parent->CollisionBoundingBox();
 
     ROBOT_SIZE = (rBox.XLength()) / 2;  // 0.7
     ROBOT_WING = (rBox.YLength()) / 2;  //
 
-    ROS_INFO_STREAM("robot size : " << rBox.XLength() << " " << rBox.YLength());
+    ROS_INFO_STREAM("EXPLORATION : robot size  " << rBox.XLength() << " " << rBox.YLength());
 
     // exit();
     // explorationLogic(anim);
@@ -544,8 +544,8 @@ public:
     key->Translation(ignition::math::Vector3d(position.x, position.y, 0.132273));
     key->Rotation(ignition::math::Quaterniond(0, 0, position.yaw));
     // // log frame
-    ROS_INFO_STREAM("frame is " << 0);
-    ROS_INFO_STREAM("x: " << position.x << "y:" << position.y << "yaw:" << position.yaw);
+    ROS_INFO_STREAM("EXPLORATION : frame is " << 0);
+    ROS_INFO_STREAM("EXPLORATION : x: " << position.x << "y:" << position.y << "yaw:" << position.yaw);
 
     int sampleFactor = 2;
     int sample = simTimePerIter * sampleFactor;
@@ -555,7 +555,7 @@ public:
       map_creator_err = true;
       // std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
       // a << "ilk durumda kesişim var map_creator_script hatalı" << std::endl;
-      ROS_INFO("ilk durumda kesişim var map_creator_script hatalı");
+      ROS_INFO("EXPLORATION : ilk durumda kesişim var map_creator_script hatalı");
       // a.close();
     }
     for (int i = 1; i <= sample; i++)
@@ -580,8 +580,8 @@ public:
       position.x = x;
       position.y = y;
       position.yaw = yaw;
-      ROS_INFO_STREAM("frame is " << keyFrame);
-      ROS_INFO_STREAM("x: " << position.x << "y:" << position.y << "yaw:" << position.yaw);
+      ROS_INFO_STREAM("EXPLORATION : frame is " << keyFrame);
+      ROS_INFO_STREAM("EXPLORATION : x: " << position.x << "y:" << position.y << "yaw:" << position.yaw);
       key->Translation(ignition::math::Vector3d(position.x, position.y, 0.132273));
       key->Rotation(ignition::math::Quaterniond(0, 0, position.yaw));
     }
@@ -620,7 +620,7 @@ public:
     //           << std::endl;
     ROS_INFO_STREAM("EXPLORATION : ROBOT X,Y,yaw info : " << std::setprecision(15) << position.x << " " << position.y
                                                           << " " << position.yaw);
-    this->robotPositionSequence++;
+    // this->robotPositionSequence++;
   }
 
   void Reset()
@@ -663,7 +663,7 @@ public:
       //     new gazebo::common::PoseAnimation("test", simTimePerIter, true));
       // this->anim = anim;
 
-      this->model->StopAnimation();
+      // this->model->StopAnimation();
       // anim->~PoseAnimation();
 
       gazebo::common::PoseAnimationPtr anim(

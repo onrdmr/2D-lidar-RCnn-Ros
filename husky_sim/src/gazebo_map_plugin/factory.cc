@@ -33,7 +33,7 @@ public:
   {
     this->buildingEditorPath = "/home/onur/building_editor_models";
 
-    std::cout << "Factory World Plugin Loaded : World " << _parent->Name() << std::endl;
+    ROS_INFO_STREAM("Factory World Plugin Loaded : World " << _parent->Name());
     this->worldPtr = _parent;
     this->sdf = _sdf;
     this->request = "SET_MAP";
@@ -119,8 +119,6 @@ public:
     {
       int removedWallSequence = modelWallSequence - 1;
       const std::string removeModel = "walls" + std::to_string(removedWallSequence);
-      std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
-      a << "removedWallSequence: " << removeModel << std::endl;
 
       // std::cout << "removedWallSequence: " << removeModel << std::endl;
       if (worldPtr->ModelByName(removeModel) != NULL)
@@ -134,7 +132,7 @@ public:
       // physics::ModelPtr wallModel = worldPtr->ModelByName(str);
       // wallModel->SetName("removed");
       // wallModel->Fini();
-      std::cout << str << " loading." << std::endl;
+      ROS_INFO_STREAM(str << " loading.");
 
       msg.set_sdf_filename(str);
 
@@ -144,7 +142,7 @@ public:
 
       // Send the message
       factoryPub->Publish(msg);
-      std::cout << "Model with modelWallSequence " << modelWallSequence << " is loaded " << std::endl;
+      ROS_INFO_STREAM("FACTORY : Model with modelWallSequence " << modelWallSequence << " is loaded ");
     }
   }
 
@@ -162,7 +160,7 @@ public:
     ss.clear();
     ss << this->request;
     srv.request.in = ss.str();
-    std::cout << "Factory - sending request to server " << ss.str() << std::endl;
+    ROS_INFO_STREAM("Factory - sending request to server " << ss.str());
     if (client.call(srv))
     {
       ROS_INFO("FACTORY : Server response got");
@@ -197,7 +195,7 @@ public:
         std::stringstream sstream;
         sstream << stream.rdbuf();
         std::string bitmap = sstream.str();
-        std::cout << "bitmap " << bitmap << std::endl;
+        ROS_INFO_STREAM("FACTORY : bitmap " << bitmap);
         std::vector<std::string> token;
         boost::split(token, bitmap, boost::is_any_of(" "));
 
@@ -231,10 +229,10 @@ public:
         int i = 0;
         for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
         {
-          std::cout << "stoi" << token[i] << " " << srv.response.bitmapId << std::endl;
+          ROS_INFO_STREAM("FACTORY : bitmap token :" << token[i] << " " << srv.response.bitmapId);
           if (std::stoi(token[i]) == true)
           {
-            std::cout << "written " << itr->second << std::endl;
+            ROS_INFO_STREAM("FACTORY : written " << itr->second);
             sdf::SDF model;
 
             std::ifstream ifSdfStream(itr->second, std::ifstream::in);
@@ -272,7 +270,6 @@ public:
 
       // if (client.call(srv))
       // {
-      std::cout << "server response got" << std::endl;
       /*
         int32 wallSequence
         int32 robotPositionId
@@ -296,7 +293,7 @@ public:
         std::stringstream sstream;
         sstream << stream.rdbuf();
         std::string bitmap = sstream.str();
-        std::cout << "bitmap " << bitmap << std::endl;
+        ROS_INFO_STREAM("FACTORY : Bitmap " << bitmap);
         std::vector<std::string> token;
         boost::split(token, bitmap, boost::is_any_of(" "));
 
@@ -363,10 +360,10 @@ public:
         int i = 0;
         for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
         {
-          std::cout << "stoi" << token[i] << " " << srv.response.bitmapId << std::endl;
+          ROS_INFO_STREAM("FACTORY : Stoi" << token[i] << " " << srv.response.bitmapId);
           if (std::stoi(token[i]) == true)
           {
-            std::cout << "written " << itr->second << std::endl;
+            ROS_INFO_STREAM("FACTORY : Written " << itr->second);
             sdf::SDF model;
 
             std::ifstream ifSdfStream(itr->second, std::ifstream::in);

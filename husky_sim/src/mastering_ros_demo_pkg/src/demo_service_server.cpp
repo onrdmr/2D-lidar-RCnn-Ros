@@ -64,7 +64,7 @@ class MessageHandler
 public:
   MessageHandler(std::string buildingPath) : buildingEditorPath(buildingPath)
   {
-    std::cout << "building editor path is loaded : " << buildingPath << std::endl;
+    ROS_INFO_STREAM("SERVICE : Building editor path is loaded : " << buildingPath);
 
     this->recordSubF = NULL;
     this->recordSubR = NULL;
@@ -80,10 +80,8 @@ public:
       std::string str = s.str();
       std::string folder_name = "wall";
       std::size_t found = str.find(folder_name);
-      std::fstream a("/home/onur/2D-lidar-RCnn-Ros/husky_sim/log/log.log", std::ios::out | std::ios::in);
-      a << found << ": " << str << " " << str.substr(found + folder_name.size()) << std::endl;
-      a.close();
-      std::cout << found << ": " << str << " " << str.substr(found + folder_name.size()) << std::endl;
+
+      ROS_INFO_STREAM("SERVICE : " << found << ": " << str << " " << str.substr(found + folder_name.size()));
 
       if (found != string::npos)
       {
@@ -96,11 +94,11 @@ public:
 
     for (auto itr = dataset.begin(); itr != dataset.end(); ++itr)
     {
-      std::cout << "loading dataset catalog to server." << std::endl;
-      std::cout << itr->second << std::endl;
+      ROS_INFO("SERVICE : loading dataset catalog to server.");
+      ROS_INFO_STREAM("SERVICE : " << itr->second);
     }
 
-    std::cout << "Total dataset count : " << dataset.size() << std::endl;
+    ROS_INFO_STREAM("SERVICE : Total dataset count : " << dataset.size());
 
     this->totalWallSequence = dataset.size();
     this->wallSequenceId = 1;
@@ -129,7 +127,6 @@ public:
     ros::init(argc, argv, "clock_subscriber");
 
     ros::NodeHandle node_obj;
-    std::cout << "deneme " << std::endl;
     ros::SubscribeOptions ops;
     const boost::function<void(const rosgraph_msgs::Clock::ConstPtr&)> reset_sim_callback(
         boost::bind(&MessageHandler::reset_sim_callback, this, _1));
@@ -156,12 +153,12 @@ private:
   void set_message()
   {
     bool singleRoom = true;
-    std::cout << "setting message " << this->dbItr->second << std::endl;
+    ROS_INFO_STREAM("SERVICE : Setting message " << this->dbItr->second);
     this->totalRobotPosition = 0;
     this->totalSubModel = 0;
     for (const auto& entry : fs::directory_iterator(this->dbItr->second))
     {
-      std::cout << entry << std::endl;
+      ROS_INFO_STREAM(entry);
       std::stringstream s;
       s << entry;
       std::string str = s.str();
@@ -170,11 +167,11 @@ private:
       {
         singleRoom = false;
         this->mapType = "multi-room";
-        std::cout << "multi-room" << std::endl;
+        ROS_INFO("SERVICE : multi-room");
       }
       if (str.find("sub_models") != string::npos)
       {
-        std::cout << "submodels" << std::endl;
+        ROS_INFO("SERVICE : submodels");
         this->bitmapId = 0;
 
         std::filesystem::path p1{ str.substr(1, str.size() - 2) };
@@ -206,7 +203,7 @@ private:
     }
     if (singleRoom == true)
     {
-      std::cout << "single-room" << std::endl;
+      ROS_INFO("single-room");
       this->mapType = "single-room";
     }
   }
@@ -304,7 +301,7 @@ private:
     }
     catch (rosbag::BagIOException&)
     {
-      std::cout << "exception occured this sequence" << std::endl;
+      ROS_INFO("Exception occured this sequence");
     }
 
     // bagF.close();
@@ -382,7 +379,7 @@ private:
   {
     if (req.in == "SET_MAP")
     {
-      std::cout << "send req içindeyim " << std::endl;
+      ROS_INFO("SERVICE : send req içindeyim ");
       std::stringstream ss;
 
       res.wallSequence = this->wallSequenceId;
@@ -426,12 +423,12 @@ private:
         ros::ServiceClient resetGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/reset_simulation");
         std_srvs::Empty srv;
         // res.out = "SET_MAP";
+        setNewExplorationStates();
+        this->readyToExplore = true;
         if (resetGazebo.call(srv))
         {
-          this->readyToExplore = true;
           ROS_INFO("SERVICE : Resetting Gazebo World with REMOVED MODELS");
         }
-        setNewExplorationStates();
       });
       thread.detach();
     }
@@ -451,10 +448,10 @@ private:
 
   void printMessageDebug()
   {
-    std::cout << mapType << " wallSequenceId :" << this->wallSequenceId << " robotPositionId :" << this->robotPositionId
-              << "  totalRobotPosition :" << this->totalRobotPosition
-              << " totalWallSequence :" << this->totalWallSequence << " totalSubModel :" << this->totalSubModel
-              << " bitmapId" << this->bitmapId << std::endl;
+    ROS_INFO_STREAM("SERVICE : " << mapType << " wallSequenceId :" << this->wallSequenceId << " robotPositionId :"
+                                 << this->robotPositionId << "  totalRobotPosition :" << this->totalRobotPosition
+                                 << " totalWallSequence :" << this->totalWallSequence
+                                 << " totalSubModel :" << this->totalSubModel << " bitmapId" << this->bitmapId);
   }
 
   int findBitmapId()
@@ -475,24 +472,24 @@ private:
     {
       if (this->robotPositionId < this->totalRobotPosition)
       {
-        std::cout << "robot Position id arttı setnewexpl" << std::endl;
+        ROS_INFO("robot Position id arttı setnewexpl");
         this->robotPositionId++;
       }
       else
       {
-        std::cout << "state exploration." << std::endl;
+        ROS_INFO("state exploration.");
         this->wallSequenceId++;
         if (this->wallSequenceId == this->totalWallSequence + 1)
         {
-          std::cout << "program sonlandı yeni veri girdi kuyruğu beklenmekte" << std::endl;
-          std::cout << "girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek." << std::endl;
+          ROS_INFO("program sonlandı yeni veri girdi kuyruğu beklenmekte");
+          ROS_INFO("girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek.");
           return;
         }
         this->robotPositionId = 0;
 
         this->dbItr++;
-        std::cout << "itr" << this->dbItr->second << " " << this->wallSequenceId << " " << this->robotPositionId
-                  << std::endl;
+        ROS_INFO_STREAM("SERVICE : itr" << this->dbItr->second << " " << this->wallSequenceId << " "
+                                        << this->robotPositionId);
 
         set_message();
       }
@@ -506,21 +503,21 @@ private:
       }
       else
       {
-        std::cout << "state exploration." << std::endl;
+        ROS_INFO("SERVICE : state exploration.");
         this->wallSequenceId++;
 
         if (this->wallSequenceId == this->totalWallSequence + 1)
         {
-          std::cout << "program sonlandı yeni veri girdi kuyruğu beklenmekte" << std::endl;
-          std::cout << "girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek." << std::endl;
+          ROS_INFO("SERVICE : program sonlandı yeni veri girdi kuyruğu beklenmekte");
+          ROS_INFO("SERVICE : girdi verilirse tetiklenip toplan duvar sequence bilgisi güncellenecek.");
           return;
         }
 
         this->robotPositionId = 0;
 
         this->dbItr++;
-        std::cout << "itr" << this->dbItr->second << " " << this->wallSequenceId << " " << this->robotPositionId
-                  << std::endl;
+        ROS_INFO_STREAM("SERVIC : itr" << this->dbItr->second << " " << this->wallSequenceId << " "
+                                       << this->robotPositionId);
 
         set_message();
       }
