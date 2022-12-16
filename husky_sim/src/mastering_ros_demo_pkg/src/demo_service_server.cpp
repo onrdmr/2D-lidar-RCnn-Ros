@@ -108,7 +108,7 @@ public:
     this->bitmapId = -1;
 
     this->totalRobotPosition = 0;
-    this->resetTime = 10;
+    this->resetTime = 15;
 
     set_message();
   }

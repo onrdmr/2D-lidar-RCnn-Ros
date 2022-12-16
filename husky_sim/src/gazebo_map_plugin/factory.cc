@@ -90,8 +90,8 @@ public:
     msg.set_sdf_filename(str);
 
     // Pose to initialize the model to
-    msgs::Set(msg.mutable_pose(),
-              ignition::math::Pose3d(ignition::math::Vector3d(0, 0, 0), ignition::math::Quaterniond(0, 0, 0)));
+    // msgs::Set(msg.mutable_pose(),
+    //           ignition::math::Pose3d(ignition::math::Vector3d(0, 0, 0), ignition::math::Quaterniond(0, 0, 0)));
 
     // Send the message
     factoryPub->Publish(msg);

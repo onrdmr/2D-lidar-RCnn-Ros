@@ -343,31 +343,34 @@ public:
       //   /* Read the WKT into geometry objects */
 
       GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
+
+      // GEOSBuffer(geom_b)
+
       /* Calculate the intersection */
-      GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
+      bool contain = GEOSContains(geom_b, geom_a);
 
       /* Convert result to WKT */
 
       /* Trim trailing zeros off output */
       GEOSWKTWriter_setTrim(writer, 1);
-      char* wkt_inter = GEOSWKTWriter_write(writer, inter);
+      // char* wkt_inter = GEOSWKTWriter_write(writer, inter);
       char* wall_geom = GEOSWKTWriter_write(writer, geom_b);
 
       /* Print answer */
-      ROS_INFO("EXPLORATION : Intersection(A, B): %s\n", wkt_inter);
+      ROS_INFO("EXPLORATION : IsContainFreeSpacePolygon(A, B): %d\n", contain);
       ROS_INFO("EXPLORATION : WallPolygon(A, B): %s\n", wall_geom);
 
-      char* output = NULL;
-      output = strstr(wkt_inter, "EMPTY");
+      // char* output = NULL;
+      // output = strstr(wkt_inter, "EMPTY");
 
-      if (output == NULL)
+      if (!contain)
       {
         intersection = true;
         GEOSWKBReader_destroy(reader);
         GEOSWKTWriter_destroy(writer);
         GEOSGeom_destroy(geom_b);
-        GEOSGeom_destroy(inter);
-        GEOSFree(wkt_inter);
+        // GEOSGeom_destroy(inter);
+        // GEOSFree(wkt_inter);
         GEOSWKTReader_destroy(readerWKT);
         GEOSGeom_destroy(geom_a);
         return intersection;
@@ -375,11 +378,9 @@ public:
       GEOSWKBReader_destroy(reader);
       GEOSWKTWriter_destroy(writer);
       GEOSGeom_destroy(geom_b);
-      GEOSGeom_destroy(inter);
-      GEOSFree(wkt_inter);
+      // GEOSGeom_destroy(inter);
+      // GEOSFree(wkt_inter);
 
-      GEOSWKTReader_destroy(readerWKT);
-      GEOSGeom_destroy(geom_a);
       /* Clean up everything we allocated */
 
       if (this->bitmapId != -1)
@@ -420,12 +421,13 @@ public:
         int i = 0;
         for (auto itr = modelSet.begin(); itr != modelSet.end() && i < token.size(); ++itr, ++i)
         {
-          ROS_INFO_STREAM("EXPLORATION : stoi" << token[i] << " " << this->bitmapId);
+          ROS_INFO_STREAM("EXPLORATION : token:" << token[i] << " bitmapId:" << this->bitmapId);
+          // std::cout << "stoi" << token[i] << " " << this->bitmapId << std::endl;
           if (std::stoi(token[i]) == true)
           {
             GEOSWKBReader* reader = GEOSWKBReader_create();
             GEOSWKTWriter* writer = GEOSWKTWriter_create();
-            ROS_INFO_STREAM("EXPLORATION : duvar " << itr->second << " ve robot arasında kesişim aranıyor.");
+            ROS_INFO_STREAM("EXPLORATON : duvar " << itr->second << " ve robot arasında kesişim aranıyor.");
 
             FILE* filp_b = fopen(itr->second.c_str(), "rb");
             int bytes_read_b = fread(buffer_b, sizeof(unsigned char), 300000, filp_b);
@@ -436,8 +438,10 @@ public:
             //   /* Read the WKT into geometry objects */
 
             GEOSGeometry* geom_b = GEOSWKBReader_read(reader, buffer_b, bytes_read_b);
+            ROS_INFO("EXPLORATION : read geom_b");
             /* Calculate the intersection */
             GEOSGeometry* inter = GEOSIntersection(geom_a, geom_b);
+            ROS_INFO("EXPLORATION : intersection doing..");
 
             /* Convert result to WKT */
 
@@ -475,16 +479,14 @@ public:
           {
             continue;
           }
-          GEOSWKTReader_destroy(readerWKT);
-          GEOSGeom_destroy(geom_a);
+
           /* Clean up everything we allocated */
         }
       }
+      GEOSWKTReader_destroy(readerWKT);
+      GEOSGeom_destroy(geom_a);
     }
-    else
-    {
-      return false;
-    }
+
     /* Clean up the global context */
     finishGEOS();
 
@@ -513,7 +515,7 @@ public:
     this->sdf = _sdf;
     // this->model->GetWorld()
     // create the animation
-    this->simTimePerIter = 10;
+    this->simTimePerIter = 15;
     // gazebo::common::PoseAnimationPtr anim(
     //     // name the animation "test",
     //     // make it last 10 seconds,
@@ -523,8 +525,8 @@ public:
 
     ignition::math::AxisAlignedBox rBox = _parent->CollisionBoundingBox();
 
-    ROBOT_SIZE = (rBox.XLength()) / 2;  // 0.7
-    ROBOT_WING = (rBox.YLength()) / 2;  //
+    ROBOT_SIZE = (rBox.YLength() + 0.1) / 2;  // 0.7
+    ROBOT_WING = (rBox.XLength() + 0.1) / 2;  //
 
     ROS_INFO_STREAM("EXPLORATION : robot size  " << rBox.XLength() << " " << rBox.YLength());
 
@@ -591,10 +593,10 @@ public:
   {
     // read random possible robot positions+
     // lms1xx lidar 25hz - 50hz
-    PositionDerivatives derivatives = createRandomDerivative();
-    position.x = position.x + derivatives.dx;
-    position.y = position.y + derivatives.dy;
-    position.yaw = derivatives.dyaw;
+    // PositionDerivatives derivatives = createRandomDerivative();
+    // position.x = position.x + derivatives.dx;
+    // position.y = position.y + derivatives.dy;
+    // position.yaw = derivatives.dyaw;
     // std::cout << "x: " << position.x << "y:" << position.y << "yaw:" << position.yaw << std::endl;
 
     createRandomPathAnim(anim);
