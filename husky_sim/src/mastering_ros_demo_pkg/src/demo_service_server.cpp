@@ -297,7 +297,7 @@ private:
 
       // bagR.write("/rear/scan", ros::Time::now(), laserScanR);
 
-      bagO.write("/odometry/filtered", ros::Time::now(), odom);
+      bagO.write("/ground_truth/state", ros::Time::now(), odom);
     }
     catch (rosbag::BagIOException&)
     {
@@ -333,7 +333,7 @@ private:
 
     this->recordSubF = new message_filters::Subscriber<sensor_msgs::LaserScan>(n, "/front/scan", 1000);
     // this->recordSubR = new message_filters::Subscriber<sensor_msgs::LaserScan>(n, "/rear/scan", 1000);
-    this->recordSubOdom = new message_filters::Subscriber<nav_msgs::Odometry>(n, "/odometry/filtered", 1000);
+    this->recordSubOdom = new message_filters::Subscriber<nav_msgs::Odometry>(n, "/ground_truth/state", 1000);
 
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry> SyncPolicy;
 
@@ -384,7 +384,9 @@ private:
 
       res.wallSequence = this->wallSequenceId;
       res.robotPositionId = this->robotPositionId;
-      res.bitmapId = this->bitmapId;
+
+      res.bitmapId = findBitmapId();  // sub_models yoksa -1 olmalı
+
       res.mapType = this->mapType;
       res.buildingEditorPath = this->buildingEditorPath;
       res.out = "SET_MAP";
@@ -463,10 +465,9 @@ private:
 
   void setNewExplorationStates()
   {
+    this->bitmapId = findBitmapId();
     ROS_INFO("SERVICE : setNewExploration State this->bitmapId:[%d] this->totalRobotPosition:[%d]", this->bitmapId,
              this->totalRobotPosition);
-
-    this->bitmapId = findBitmapId();
 
     if (this->bitmapId == -1)
     {

@@ -155,9 +155,9 @@ public:
     // std::cout << "multi room intersection check gireceğim " << std::endl;
     if (this->mapType == "multi-room")
     {
-      // std::cout << "mmap folder path "
-      //           << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/mmap" <<
-      //           std::endl;
+      ROS_INFO_STREAM("EXPLORATION : mmap folder path "
+                      << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/mmap"
+                      << std::endl);
       for (const auto& entry : fs::directory_iterator(this->buildingEditorPath + "/wall" +
                                                       std::to_string(this->modelWallSequence) + "/mmap"))
       {
@@ -220,7 +220,9 @@ public:
       if (this->bitmapId != -1)
       {
         std::map<std::string, fs::path> modelSet;
-
+        ROS_INFO_STREAM("EXPLORATON : 1.multimap Bitmap not equal -1 before directory iterator "
+                        << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) +
+                               "/sub_models/");
         for (const auto& entry : fs::directory_iterator(this->buildingEditorPath + "/wall" +
                                                         std::to_string(this->modelWallSequence) + "/sub_models/"))
         {
@@ -386,6 +388,9 @@ public:
       if (this->bitmapId != -1)
       {
         std::map<std::string, fs::path> modelSet;
+        ROS_INFO_STREAM("EXPLORATON : 2.single room Bitmap not equal -1 before directory iterator "
+                        << this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) +
+                               "/sub_models/");
 
         for (const auto& entry : fs::directory_iterator(this->buildingEditorPath + "/wall" +
                                                         std::to_string(this->modelWallSequence) + "/sub_models/"))
@@ -637,19 +642,39 @@ public:
     ss << "SEND_REQ";
     srv.request.in = ss.str();
     ROS_INFO_STREAM("EXPLORATION : Exploratin Scan Requesting: " << ss.str());
-
+    bool call;
     // ros::Duration(1).sleep();
-    if (client.call(srv))
+    while (call = client.call(srv))
     {
-      ROS_INFO("EXPLORATION : IN EXLPORATION_SCAN | From Client [%s], Server says [%d] [%d] [%d] [%s] [%s] [%s]",
-               srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
-               srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
-      this->buildingEditorPath = srv.response.buildingEditorPath;
-      this->modelWallSequence = srv.response.wallSequence;
-      this->robotPositionSequence = srv.response.robotPositionId;
-      this->mapType = srv.response.mapType;
-      this->bitmapId = srv.response.bitmapId;
+      if (call)
+      {
+        ROS_INFO("EXPLORATION : IN EXLPORATION_SCAN | From Client [%s], Server says [%d] [%d] [%d] [%s] [%s] [%s]",
+                 srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
+                 srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
+        this->buildingEditorPath = srv.response.buildingEditorPath;
+        this->modelWallSequence = srv.response.wallSequence;
+        this->robotPositionSequence = srv.response.robotPositionId;
+        this->mapType = srv.response.mapType;
+        this->bitmapId = srv.response.bitmapId;
+        break;
+      }
+      else
+      {
+        client.waitForExistence();
+      }
     }
+    // if (client.call(srv))
+    // {
+    //   ROS_INFO("EXPLORATION : IN EXLPORATION_SCAN | From Client [%s], Server says [%d] [%d] [%d] [%s] [%s] [%s]",
+    //            srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId,
+    //            srv.response.bitmapId, srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(),
+    //            srv.response.out.c_str());
+    //   this->buildingEditorPath = srv.response.buildingEditorPath;
+    //   this->modelWallSequence = srv.response.wallSequence;
+    //   this->robotPositionSequence = srv.response.robotPositionId;
+    //   this->mapType = srv.response.mapType;
+    //   this->bitmapId = srv.response.bitmapId;
+    // }
     if (srv.response.out == "true")
     {
       ROS_INFO("EXPLORATION : EXPLORATION is starting...");

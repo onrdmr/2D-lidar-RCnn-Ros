@@ -161,12 +161,23 @@ public:
     ss << this->request;
     srv.request.in = ss.str();
     ROS_INFO_STREAM("Factory - sending request to server " << ss.str());
-    if (client.call(srv))
+    bool call = true;
+    ROS_INFO_STREAM("FACTORY : client states " << client.isPersistent() << " " << client.exists());
+
+    while (call = client.call(srv))
     {
       ROS_INFO("FACTORY : Server response got");
       ROS_INFO("FACTORY : IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s][%s]",
                srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
                srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
+      if (call)
+      {
+        break;
+      }
+      else
+      {
+        client.waitForExistence();
+      }
     }
 
     if (this->request == "REMOVE_RESET")
@@ -201,6 +212,8 @@ public:
 
         std::string subModelPath =
             this->buildingEditorPath + "/wall" + std::to_string(this->modelWallSequence) + "/sub_models/";
+
+        ROS_INFO_STREAM("FACTORY : wall0 exception" << subModelPath);
 
         std::map<std::string, fs::path> modelSet;
         for (const auto& entry : fs::directory_iterator(subModelPath))
@@ -257,10 +270,23 @@ public:
       }
 
       srv.request.in = "READY_TO_EXPLORE";
-      if (client.call(srv))
+
+      while (call = client.call(srv))
       {
-        worldPtr->SetPaused(false);
+        if (call)
+        {
+          worldPtr->SetPaused(false);
+          break;
+        }
+        else
+        {
+          client.waitForExistence();
+        }
       }
+      // if (client.call(srv))
+      // {
+      //   worldPtr->SetPaused(false);
+      // }
 
       this->request = "REMOVE_RESET";
     }
@@ -391,6 +417,7 @@ public:
       // READY_TO_EXPLORE
 
       srv.request.in = "READY_TO_EXPLORE";
+
       if (client.call(srv))
       {
         worldPtr->SetPaused(false);
