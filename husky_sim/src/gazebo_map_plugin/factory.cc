@@ -161,18 +161,18 @@ public:
     ss << this->request;
     srv.request.in = ss.str();
     ROS_INFO_STREAM("Factory - sending request to server " << ss.str());
-    bool call = true;
+    bool call = false;
     ROS_INFO_STREAM("FACTORY : client states " << client.isPersistent() << " " << client.exists());
 
-    while (call = client.call(srv))
+    while (!call)
     {
-      ROS_INFO("FACTORY : Server response got");
-      ROS_INFO("FACTORY : IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s][%s]",
-               srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
-               srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
-      if (call)
+      if (call = client.call(srv))
       {
-        break;
+        ROS_INFO_STREAM("FACTORY : client states " << client.isPersistent() << " " << client.exists());
+        ROS_INFO("FACTORY : Server response got");
+        ROS_INFO("FACTORY : IN:CLIENT || From Client [%s], Server says [%d] [%d] [%d] [%s] [%s][%s]",
+                 srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
+                 srv.response.mapType.c_str(), srv.response.buildingEditorPath.c_str(), srv.response.out.c_str());
       }
       else
       {
@@ -271,12 +271,12 @@ public:
 
       srv.request.in = "READY_TO_EXPLORE";
 
-      while (call = client.call(srv))
+      call = false;
+      while (!call)
       {
-        if (call)
+        if (call = client.call(srv))
         {
           worldPtr->SetPaused(false);
-          break;
         }
         else
         {
@@ -418,9 +418,17 @@ public:
 
       srv.request.in = "READY_TO_EXPLORE";
 
-      if (client.call(srv))
+      call = false;
+      while (!call)
       {
-        worldPtr->SetPaused(false);
+        if (call = client.call(srv))
+        {
+          worldPtr->SetPaused(false);
+        }
+        else
+        {
+          client.waitForExistence();
+        }
       }
       // worldPtr->PauseTime();
       // insertModelViaMP(worldPtr);

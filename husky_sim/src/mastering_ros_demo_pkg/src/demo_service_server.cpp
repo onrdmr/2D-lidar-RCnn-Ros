@@ -114,18 +114,19 @@ public:
   }
 
 public:
-  void demo_service_server(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  void demo_service_server(int argc, char** argv)
   {
+    ros::MultiThreadedSpinner spinner(2);
     ros::init(argc, argv, "demo_service_server");
     ros::NodeHandle n;
     ros::ServiceServer service = n.advertiseService("demo_service", &MessageHandler::demo_service_callback, this);
     spinner.spin();
   }
 
-  void demo_clock_subscriber(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  void demo_clock_subscriber(int argc, char** argv)
   {
     ros::init(argc, argv, "clock_subscriber");
-
+    ros::MultiThreadedSpinner spinner(1);
     ros::NodeHandle node_obj;
     ros::SubscribeOptions ops;
     const boost::function<void(const rosgraph_msgs::Clock::ConstPtr&)> reset_sim_callback(
@@ -139,14 +140,14 @@ public:
     spinner.spin();
   }
 
-  std::thread demo_clock_subscriber_thread(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  std::thread demo_clock_subscriber_thread(int argc, char** argv)
   {
-    return std::thread([=] { demo_clock_subscriber(argc, argv, spinner); });
+    return std::thread([=] { demo_clock_subscriber(argc, argv); });
   }
 
-  std::thread demo_service_server_thread(int argc, char** argv, ros::MultiThreadedSpinner spinner)
+  std::thread demo_service_server_thread(int argc, char** argv)
   {
-    return std::thread([=] { demo_service_server(argc, argv, spinner); });
+    return std::thread([=] { demo_service_server(argc, argv); });
   }
 
 private:
@@ -301,9 +302,12 @@ private:
     }
     catch (rosbag::BagIOException&)
     {
-      ROS_INFO("Exception occured this sequence");
+      ROS_INFO("Exception occured this sequence.");
     }
-
+    catch (rosbag::BagUnindexedException&)
+    {
+      ROS_INFO("Bag unindexed exception.");
+    }
     // bagF.close();
     // bagO.close();
     // bagR.close();
@@ -318,8 +322,10 @@ private:
 
     this->recordSpinner = new ros::AsyncSpinner(1);
     ros::NodeHandle n;
-    ROS_INFO("SERVICE : record data sleep 2 duration");
-    ros::Duration(2).sleep();
+    ROS_INFO("SERVICE : record data sleep 1 duration");
+    while (!ros::Duration(1).sleep())
+    {
+    }
 
     ROS_INFO("SERVICE : Bag dosyası oluşturuluyor.");
     // ön lazer , alt lazer
@@ -427,9 +433,17 @@ private:
         // res.out = "SET_MAP";
         setNewExplorationStates();
         this->readyToExplore = true;
-        if (resetGazebo.call(srv))
+        bool call = false;
+        while (!call)
         {
-          ROS_INFO("SERVICE : Resetting Gazebo World with REMOVED MODELS");
+          if (call = resetGazebo.call(srv))
+          {
+            ROS_INFO("SERVICE : Resetting Gazebo World with REMOVED MODELS");
+          }
+          else
+          {
+            resetGazebo.waitForExistence();
+          }
         }
       });
       thread.detach();
@@ -556,13 +570,13 @@ private:
 int main(int argc, char** argv)
 {
   // ros::Rate r(1);
-  ros::MultiThreadedSpinner spinner(2);
+
   MessageHandler* handler = new MessageHandler("/home/onur/building_editor_models");
 
   ROS_INFO("SERVICE : Ready to receive from client.");
   // thread_demo_clock_subscriber(argc, argv);
-  std::thread update = handler->demo_clock_subscriber_thread(argc, argv, spinner);
-  std::thread server = handler->demo_service_server_thread(argc, argv, spinner);
+  std::thread update = handler->demo_clock_subscriber_thread(argc, argv);
+  std::thread server = handler->demo_service_server_thread(argc, argv);
   // handler->std::thread server(&handler->thread_demo_service_server, argc, argv, spinner);
 
   update.join();

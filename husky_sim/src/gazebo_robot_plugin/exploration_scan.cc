@@ -642,11 +642,11 @@ public:
     ss << "SEND_REQ";
     srv.request.in = ss.str();
     ROS_INFO_STREAM("EXPLORATION : Exploratin Scan Requesting: " << ss.str());
-    bool call;
+    bool call = false;
     // ros::Duration(1).sleep();
-    while (call = client.call(srv))
+    while (!call)
     {
-      if (call)
+      if (call = client.call(srv))
       {
         ROS_INFO("EXPLORATION : IN EXLPORATION_SCAN | From Client [%s], Server says [%d] [%d] [%d] [%s] [%s] [%s]",
                  srv.request.in.c_str(), srv.response.wallSequence, srv.response.robotPositionId, srv.response.bitmapId,
@@ -656,7 +656,6 @@ public:
         this->robotPositionSequence = srv.response.robotPositionId;
         this->mapType = srv.response.mapType;
         this->bitmapId = srv.response.bitmapId;
-        break;
       }
       else
       {
