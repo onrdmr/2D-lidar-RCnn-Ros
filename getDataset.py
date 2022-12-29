@@ -17,5 +17,6 @@ else:
 for i,file in enumerate(ftp.nlst()):
     i = lastFolderIdx + i + 1
     ftp.retrbinary('RETR %s'%file, open(localfilepath + "\{i}_angleBin.npy".format(i=i), 'wb').write)
+    ftp.delete(file)
 
 ftp.quit()
