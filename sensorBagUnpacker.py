@@ -53,7 +53,7 @@ for j, folder in enumerate(listdir):
 
   #  lidarBinDataset=lidarBinDataset[1:]
   #  label=label[1:]
-   binDataset = np.array({'lidarDataset':lidarBinDataset,'labelDataset': label})
+   binDataset = np.array({'lidarDataset':lidarBinDataset[1:],'labelDataset': label})
 
    if break_count==5:
     break
@@ -64,6 +64,12 @@ for j, folder in enumerate(listdir):
 print("duvar " + str(j+1) + " de atma işlemi bitirildi.")
 
 wall_idx = j
+
+if(listdir[-1] == folder) :
+  last_wall_idx=re.findall(r'\d+', folder)[0]
+  for i in range(1,int(last_wall_idx)+1):
+    shutil.rmtree(buildingEditorModels + "/wall" + str(i) )
+
 
 
 for i in range(1,wall_idx):

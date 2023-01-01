@@ -13,8 +13,8 @@
    // "args": ["single_room","6", "-10", "10", "--mesh"],
    // "args": ["multi_room","99", "--mesh", "--debug"],
    //# [kaç tane multi harita oluşacağı] [hangi id den itibaren] [kaç tane single room olacağı] [single max room uzunluğu sayısı] [max nokta sayısı] [%meshli mi meshsiz mi olacağı] [max multi_map scale facror] [...]
-   "args" : ["all_room", "150", "200", "70", "20", "10", "75" , "30"]
-
+   "args" : ["all_room", "150", "200", "70", "20", "10", "75" , "30"],
+   //"args" : ["all_room", "150", "200", "70", "20", "10", "75" , "30"] // all_room - 0 
   }
  ]
 }
