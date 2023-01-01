@@ -9,16 +9,18 @@ import re
 buildingEditorModels = "/home/onur/building_editor_models" 
 
 
-
-
-
 listdir=os.listdir(buildingEditorModels)
 listdir=sorted(listdir, key=lambda x : int(re.findall(r'\d+', x)[0]) )
-
+break_count = 0
 for j, folder in enumerate(listdir):
+  if break_count==5:
+    break
   break_count = 0
   if os.path.isdir(buildingEditorModels + "/" + folder) != True:
     break
+
+  
+
   for i in range(5):
    
    if(os.path.isdir(buildingEditorModels + "/" + folder + "/sensors/" + str(i) ) != True
@@ -55,8 +57,7 @@ for j, folder in enumerate(listdir):
   #  label=label[1:]
    binDataset = np.array({'lidarDataset':lidarBinDataset[1:],'labelDataset': label})
 
-   if break_count==5:
-    break
+   
    #setfacl -R -m u:username:rwx myfolder
    np.save(arr=binDataset, file="/home/ftpuser/ftp/files/dataset/"+str(j)+str(i))
 
@@ -76,7 +77,7 @@ for i in range(1,wall_idx):
   shutil.rmtree(buildingEditorModels + "/wall" + str(i) )
 
 if break_count == 5:
-  for i, file in enumerate(os.listdir(buildingEditorModels), start=1):
+  for i, file in enumerate(listdir, start=1):
     os.rename(buildingEditorModels + "/" + file, buildingEditorModels + "/wall"+str(i) )
 
     model_config_tree = ET.parse(buildingEditorModels + "/wall" + str(i) + "/model.config")
