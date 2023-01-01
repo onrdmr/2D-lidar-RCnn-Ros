@@ -77,6 +77,8 @@ for i in range(1,wall_idx):
   shutil.rmtree(buildingEditorModels + "/wall" + str(i) )
 
 if break_count == 5:
+  listdir=os.listdir(buildingEditorModels)
+  listdir=sorted(listdir, key=lambda x : int(re.findall(r'\d+', x)[0]) )
   for i, file in enumerate(listdir, start=1):
     os.rename(buildingEditorModels + "/" + file, buildingEditorModels + "/wall"+str(i) )
 
