@@ -12,8 +12,8 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(gazebo_map_plugin)
 
 find_package(catkin REQUIRED COMPONENTS
- roscpp
- std_msgs
+  roscpp
+  std_msgs
   message_generation
   message_runtime
 )
@@ -41,6 +41,7 @@ find_package(gazebo REQUIRED)
 
 
 include_directories(
+  ${catkin_INCLUDE_DIRS}
   ${GAZEBO_INCLUDE_DIRS}
 )
 link_directories(${GAZEBO_LIBRARY_DIRS})
