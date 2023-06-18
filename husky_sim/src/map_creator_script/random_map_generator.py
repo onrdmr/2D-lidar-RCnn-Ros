@@ -996,8 +996,8 @@ if __name__=="__main__":
             print("starting random map creation...")
             createSingleRoom()
         elif(args.choice == 'multi_room'):
-            print("starting random map creation...")
-            py_path = os.path.dirname(__file__)
+            print("starting random map creation..." + str(__file__))
+            py_path = os.path.dirname(__file__) or '.'
 
             print(py_path+'/nav2_random_map_generator/src')
             # os.chdir(py_path+'/nav2_random_map_generator/src')

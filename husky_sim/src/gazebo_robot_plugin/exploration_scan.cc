@@ -419,7 +419,7 @@ public:
         std::stringstream sstream;
         sstream << stream.rdbuf();
         std::string bitmap = sstream.str();
-        ROS_INFO_STREAM("EXLPORATION : bitmap " << bitmap);
+        ROS_INFO_STREAM("EXPLORATION : bitmap " << bitmap);
         std::vector<std::string> token;
         boost::split(token, bitmap, boost::is_any_of(" "));
 
