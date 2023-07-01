@@ -1,4 +1,4 @@
-*Bu branch simülasyon modelleme branchıdır. Eğitilen model ile ilgili notebook model dosyasındandır.*
+*This branch is about simulation modelling. Trained model is in model branch.*
 
 # 2D-lidar-RCnn-Ros
 	sudo apt install ros-noetic-* 
