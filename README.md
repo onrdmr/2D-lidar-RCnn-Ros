@@ -1,3 +1,5 @@
+*Bu branch simülasyon modelleme branchıdır. Eğitilen model ile ilgili notebook model dosyasındandır.*
+
 # 2D-lidar-RCnn-Ros
 	sudo apt install ros-noetic-* 
 # Required ros packages 
@@ -15,3 +17,7 @@
 
 # Python Libaries
 	pip3 install shapely 	
+
+# Future Work
+1. *Qt gui for simulation modelling. Now it is only work with python scripts*
+2. *docker and bash installation file*
