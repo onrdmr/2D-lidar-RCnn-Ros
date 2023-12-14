@@ -1,3 +1,7 @@
 [submodule "husky_sim/src/timed_roslaunch"]
 	path = husky_sim/src/timed_roslaunch
 	url = https://github.com/MoriKen254/timed_roslaunch.git
+
+[submodule "husky_sim/src/mastering_ros_demo_pkg/gui/Qt-CMake-HelloWorld"]
+    path = husky_sim/src/mastering_ros_demo_pkg/gui/Qt-CMake-HelloWorld
+    url = https://github.com/jasondegraw/Qt-CMake-HelloWorld

@@ -7,7 +7,6 @@
 	sudo apt install ros-noetic-flir-camera-description
 	sudo apt install ros-noetic-lms1xx
 	sudo apt install ros-noetic-velodyne-description
-
 # Usage
 	cd src/map_creator_script/src
 	sudo apt install libopencv-dev
@@ -17,7 +16,8 @@
 
 # Python Libaries
 	pip3 install shapely 	
-
+	pip3 install pcg_gazebo
+## upgde python pip and downgrade softunicode
 # Future Work
 1. *Qt gui for simulation modelling. Now it is only work with python scripts*
 2. *docker and bash installation file*
