@@ -17,7 +17,10 @@
 # Python Libaries
 	pip3 install shapely 	
 	pip3 install pcg_gazebo
-## upgde python pip and downgrade softunicode
+ 
+## Example Odometry deviation, Our model avoid this deviation using environment lidar point cloud values.
+![Ekran görüntüsü 2023-06-14 230040](https://github.com/user-attachments/assets/15ea1035-67bf-4327-8799-f86cc4b6136b)
+
 # Future Work
 1. *Qt gui for simulation modelling. Now it is only work with python scripts*
 2. *docker and bash installation file*
